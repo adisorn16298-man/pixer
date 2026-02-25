@@ -30,6 +30,7 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     const [photos, setPhotos] = useState<Photo[]>(initialPhotos);
     const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
     const [activeMoment, setActiveMoment] = useState<string>('all');
+    const [showCopied, setShowCopied] = useState(false);
 
     const primaryColor = themeColor || '#6366f1';
 
@@ -41,14 +42,27 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
         window.location.assign(`/api/photos/download?photoId=${photo.id}`);
     };
 
-    const handleShare = (photo: Photo) => {
+    const handleShare = async (photo: Photo) => {
+        const shareUrl = `${window.location.origin}/api/photos/download?photoId=${photo.id}`;
+
         if (navigator.share) {
-            navigator.share({
-                title: 'Check out this photo!',
-                url: window.location.href,
-            });
+            try {
+                await navigator.share({
+                    title: 'Check out this photo!',
+                    url: shareUrl,
+                });
+            } catch (err) {
+                console.log('Share failed or cancelled');
+            }
         } else {
-            alert('Sharing is not supported on this browser');
+            // Fallback to clipboard
+            try {
+                await navigator.clipboard.writeText(shareUrl);
+                setShowCopied(true);
+                setTimeout(() => setShowCopied(false), 2000);
+            } catch (err) {
+                alert('Failed to copy link');
+            }
         }
     };
     return (
@@ -145,8 +159,20 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                             <button onClick={() => handleDownload(selectedPhoto)} className="flex items-center gap-2 bg-slate-800 px-6 py-3 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700 text-sm md:text-base font-medium">
                                 <DownloadIcon /> Download
                             </button>
-                            <button onClick={() => handleShare(selectedPhoto)} className="flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-lg text-sm md:text-base font-medium" style={{ backgroundColor: primaryColor }}>
+                            <button onClick={() => handleShare(selectedPhoto)} className="relative flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-lg text-sm md:text-base font-medium" style={{ backgroundColor: primaryColor }}>
                                 <ShareIcon /> Share
+                                <AnimatePresence>
+                                    {showCopied && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: -45 }}
+                                            exit={{ opacity: 0 }}
+                                            className="absolute left-1/2 -translate-x-1/2 bg-white text-[10px] md:text-xs text-slate-900 px-3 py-1 rounded-full shadow-xl whitespace-nowrap font-black pointer-events-none"
+                                        >
+                                            LINK COPIED! 🔗
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </button>
                         </div>
                     </motion.div>
