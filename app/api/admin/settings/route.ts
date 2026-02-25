@@ -10,7 +10,7 @@ export async function PUT(request: Request) {
     try {
         const body = await request.json();
         const {
-            brandName, brandLogoUrl, watermarkUrl, frameUrl,
+            name, brandName, brandLogoUrl, watermarkUrl, frameUrl,
             watermarkPortraitUrl, framePortraitUrl,
             whiteLabel, jpegQuality, thumbQuality
         } = body;
@@ -24,7 +24,7 @@ export async function PUT(request: Request) {
         const updatedUser = await prisma.user.update({
             where: { id: user.id },
             data: {
-                brandName, brandLogoUrl, watermarkUrl, frameUrl,
+                name, brandName, brandLogoUrl, watermarkUrl, frameUrl,
                 watermarkPortraitUrl, framePortraitUrl,
                 whiteLabel, jpegQuality, thumbQuality
             },

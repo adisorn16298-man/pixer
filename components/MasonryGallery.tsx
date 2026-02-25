@@ -137,11 +137,6 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                                     style={{ boxShadow: `0 20px 50px ${primaryColor}44` }}
                                     alt="Selected"
                                 />
-                                {brandName && (
-                                    <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded text-[10px] md:text-xs text-slate-300">
-                                        By {brandName}
-                                    </div>
-                                )}
                             </motion.div>
                         </div>
 

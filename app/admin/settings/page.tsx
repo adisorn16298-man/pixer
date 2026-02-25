@@ -11,6 +11,7 @@ const TABS = [
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState('branding');
     const [settings, setSettings] = useState({
+        name: '',
         brandName: '',
         brandLogoUrl: '',
         watermarkUrl: '',
@@ -29,6 +30,7 @@ export default function SettingsPage() {
             .then(res => res.json())
             .then(data => {
                 setSettings({
+                    name: data.name || '',
                     brandName: data.brandName || '',
                     brandLogoUrl: data.brandLogoUrl || '',
                     watermarkUrl: data.watermarkUrl || '',
@@ -143,6 +145,7 @@ export default function SettingsPage() {
                                         <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
                                         <h3 className="text-xl font-bold text-white">Identity</h3>
                                     </div>
+                                    {renderInput('Photographer Name', 'name')}
                                     {renderInput('Brand Name', 'brandName')}
                                     {renderInput('Brand Logo URL', 'brandLogoUrl')}
                                     {renderInput('White Label Mode', 'whiteLabel', 'Remove "Powered by Pixer" from the public gallery', 'checkbox')}
