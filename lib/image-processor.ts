@@ -10,15 +10,6 @@ const s3Enabled =
   process.env.AWS_ACCESS_KEY_ID !== 'your-access-key' &&
   !process.env.S3_ENDPOINT?.includes('<accountid>');
 
-const s3Client = s3Enabled ? new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-  endpoint: process.env.S3_ENDPOINT,
-}) : null;
-
 interface ProcessImageOptions {
   buffer: Buffer;
   filename: string;
@@ -41,14 +32,10 @@ export async function processAndUploadImage({
 
   try {
     // 1. Upload original
+    const { isS3Enabled, uploadToS3 } = await import('./s3-upload');
     console.log(`[ImageProcessor] Writing original to ${originalKey}`);
-    if (s3Client) {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: originalKey,
-        Body: buffer,
-        ContentType: 'image/jpeg',
-      }));
+    if (isS3Enabled) {
+      await uploadToS3(buffer, originalKey, 'image/jpeg');
     } else {
       const localPath = path.join(process.cwd(), 'public', originalKey);
       await fs.mkdir(path.dirname(localPath), { recursive: true });
@@ -81,13 +68,8 @@ export async function processAndUploadImage({
       ? await sharp(buffer).composite(composites).jpeg({ quality: 80 }).toBuffer()
       : buffer;
 
-    if (s3Client) {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: watermarkedKey,
-        Body: processedBuffer,
-        ContentType: 'image/jpeg',
-      }));
+    if (isS3Enabled) {
+      await uploadToS3(processedBuffer, watermarkedKey, 'image/jpeg');
     } else {
       const localPath = path.join(process.cwd(), 'public', watermarkedKey);
       await fs.mkdir(path.dirname(localPath), { recursive: true });
@@ -103,13 +85,8 @@ export async function processAndUploadImage({
       .jpeg({ quality: 60 })
       .toBuffer();
 
-    if (s3Client) {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: bucketName,
-        Key: thumbnailKey,
-        Body: thumbnailBuffer,
-        ContentType: 'image/jpeg',
-      }));
+    if (isS3Enabled) {
+      await uploadToS3(thumbnailBuffer, thumbnailKey, 'image/jpeg');
     } else {
       const localPath = path.join(process.cwd(), 'public', thumbnailKey);
       await fs.mkdir(path.dirname(localPath), { recursive: true });

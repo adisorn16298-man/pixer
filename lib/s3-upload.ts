@@ -1,14 +1,35 @@
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-const s3Client = new S3Client({
-    region: process.env.AWS_REGION,
+const s3Config = {
+    region: process.env.AWS_REGION || 'auto',
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
     },
     endpoint: process.env.S3_ENDPOINT,
-});
+};
+
+const s3Client = new S3Client(s3Config);
+
+export const isS3Enabled = !!(
+    process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY &&
+    process.env.S3_ENDPOINT &&
+    !process.env.S3_ENDPOINT.includes('<accountid>')
+);
+
+export async function uploadToS3(buffer: Buffer, key: string, contentType: string) {
+    const command = new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+    });
+
+    await s3Client.send(command);
+    return key;
+}
 
 export async function getPresignedUploadUrl(filename: string, contentType: string) {
     const key = `originals/${Date.now()}-${filename}`;
