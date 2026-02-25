@@ -20,7 +20,31 @@ export async function GET(req: NextRequest) {
             return new NextResponse('Photo not found', { status: 404 });
         }
 
-        // Resolve the local path to the watermarked image
+        const { isS3Enabled, getObjectFromS3 } = await import('@/lib/s3-upload');
+        const fileName = `pixer-${photo.id}.jpg`;
+
+        if (isS3Enabled) {
+            console.log(`[DownloadAPI] Fetching from S3: ${photo.watermarkedKey}`);
+            const s3Response = await getObjectFromS3(photo.watermarkedKey);
+
+            if (!s3Response.Body) {
+                return new NextResponse('File body empty', { status: 404 });
+            }
+
+            // In Node.js environment, Body is a IncomingMessage/Readable, but SDK v3 provides transformToWebStream
+            // @ts-ignore - transformToWebStream exists on the Node.js SDK stream response
+            const webStream = s3Response.Body.transformToWebStream();
+
+            return new NextResponse(webStream, {
+                headers: {
+                    'Content-Type': s3Response.ContentType || 'image/jpeg',
+                    'Content-Disposition': `attachment; filename="${fileName}"`,
+                    'Content-Length': s3Response.ContentLength?.toString() || '',
+                },
+            });
+        }
+
+        // Fallback to local the path to the watermarked image
         const filePath = path.join(process.cwd(), 'public', photo.watermarkedKey);
 
         if (!fs.existsSync(filePath)) {
@@ -29,7 +53,6 @@ export async function GET(req: NextRequest) {
         }
 
         const stats = fs.statSync(filePath);
-        const fileName = `pixer-${photo.id}.jpg`;
         const fileStream = fs.createReadStream(filePath);
 
         // Convert Node.js ReadStream to Web ReadableStream for Next.js
