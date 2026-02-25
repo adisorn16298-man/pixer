@@ -57,6 +57,7 @@ model Event {
   templateId      String?
   primaryColor    String?  @default("#6366f1")
   secondaryColor  String?  @default("#4f46e5")
+  logoUrl         String?
   backgroundColor String?  @default("#020617")
   moments         Moment[]
   photos          Photo[]

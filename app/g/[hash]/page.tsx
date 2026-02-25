@@ -56,7 +56,9 @@ export default async function PublicGallery({ params }: { params: { hash: string
                     style={{ backgroundColor: primaryColor }}
                 ></div>
                 <div className="relative z-10">
-                    {event.photographer.brandLogoUrl && (
+                    {event.logoUrl ? (
+                        <img src={event.logoUrl} className="h-16 mx-auto mb-6 opacity-90 object-contain max-w-[200px]" alt="Event Logo" />
+                    ) : event.photographer.brandLogoUrl && (
                         <img src={event.photographer.brandLogoUrl} className="h-12 mx-auto mb-6 opacity-80" alt="Brand Logo" />
                     )}
                     <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-7xl mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">

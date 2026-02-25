@@ -16,6 +16,7 @@ interface EventDetail {
     primaryColor?: string | null;
     secondaryColor?: string | null;
     backgroundColor?: string | null;
+    logoUrl?: string | null;
 }
 
 const THEME_PRESETS = [
@@ -157,6 +158,45 @@ export default function EventManagement() {
         });
         if (res.ok) {
             setEvent(prev => prev ? { ...prev, primaryColor: primary, secondaryColor: secondary, backgroundColor: bg } : null);
+        }
+    };
+
+    const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', 'logo');
+
+        try {
+            const res = await fetch('/api/admin/templates/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.url) {
+                const patchRes = await fetch(`/api/admin/events/${id}`, {
+                    method: 'PATCH',
+                    body: JSON.stringify({ logoUrl: data.url })
+                });
+                if (patchRes.ok) {
+                    setEvent(prev => prev ? { ...prev, logoUrl: data.url } : null);
+                }
+            }
+        } catch (error) {
+            console.error('Logo upload error:', error);
+            alert('Failed to upload logo');
+        }
+    };
+
+    const handleRemoveLogo = async () => {
+        const res = await fetch(`/api/admin/events/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ logoUrl: null })
+        });
+        if (res.ok) {
+            setEvent(prev => prev ? { ...prev, logoUrl: null } : null);
         }
     };
 
@@ -420,6 +460,31 @@ export default function EventManagement() {
                                         <span className="text-[9px] font-bold text-slate-300 uppercase tracking-tighter">{theme.name}</span>
                                     </button>
                                 ))}
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-slate-800">
+                                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Event Logo</h4>
+                                <div className="flex items-center gap-4">
+                                    {event.logoUrl ? (
+                                        <div className="relative group">
+                                            <img src={event.logoUrl} alt="Event Logo" className="h-16 w-16 object-contain rounded-xl bg-slate-800 p-2" />
+                                            <button
+                                                onClick={handleRemoveLogo}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="h-16 w-16 flex flex-col items-center justify-center border-2 border-dashed border-slate-700 rounded-xl hover:border-indigo-500 cursor-pointer transition-colors group">
+                                            <input type="file" className="hidden" onChange={handleLogoUpload} accept="image/*" />
+                                            <span className="text-xl group-hover:scale-110 transition-transform">➕</span>
+                                        </label>
+                                    )}
+                                    <div className="flex-1">
+                                        <p className="text-[10px] text-slate-400">Custom logo for this event gallery. If not set, global brand logo will be used.</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-slate-800">
