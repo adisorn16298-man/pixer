@@ -14,16 +14,16 @@ interface ProcessImageOptions {
   buffer: Buffer;
   filename: string;
   bucketName: string;
-  watermarkPath?: string;
-  framePath?: string;
+  watermarkInput?: string | Buffer;
+  frameInput?: string | Buffer;
 }
 
 export async function processAndUploadImage({
   buffer,
   filename,
   bucketName,
-  watermarkPath,
-  framePath,
+  watermarkInput,
+  frameInput,
 }: ProcessImageOptions) {
   console.log(`[ImageProcessor] Processing ${filename}`);
   const originalKey = `originals/${filename}`;
@@ -48,17 +48,20 @@ export async function processAndUploadImage({
     const mainWidth = mainMetadata.width || 0;
     const mainHeight = mainMetadata.height || 0;
 
-    if (framePath && (await fs.stat(framePath).catch(() => null))) {
+    // Helper to check if string is local path and exists
+    const exists = async (p: string) => await fs.stat(p).then(() => true).catch(() => false);
+
+    if (frameInput && (typeof frameInput !== 'string' || await exists(frameInput))) {
       // Resize frame to exact photo dimensions
-      const frameBuffer = await sharp(framePath)
+      const frameBuffer = await sharp(frameInput)
         .resize(mainWidth, mainHeight, { fit: 'fill' })
         .toBuffer();
       composites.push({ input: frameBuffer, blend: 'over' as sharp.Blend });
     }
 
-    if (watermarkPath && (await fs.stat(watermarkPath).catch(() => null))) {
+    if (watermarkInput && (typeof watermarkInput !== 'string' || await exists(watermarkInput))) {
       // Ensure watermark isn't larger than image
-      const watermarkBuffer = await sharp(watermarkPath)
+      const watermarkBuffer = await sharp(watermarkInput)
         .resize(mainWidth, mainHeight, { fit: 'inside', withoutEnlargement: true })
         .toBuffer();
       composites.push({ input: watermarkBuffer, gravity: 'center', blend: 'over' as sharp.Blend });
@@ -139,23 +142,35 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
       ? ((event?.template as any)?.framePortraitUrl || (user as any)?.framePortraitUrl || (event?.template as any)?.frameUrl || (user as any)?.frameUrl)
       : ((event?.template as any)?.frameUrl || (user as any)?.frameUrl);
 
-    let watermarkPath = undefined;
-    let framePath = undefined;
+    let watermarkInput: string | Buffer | undefined = undefined;
+    let frameInput: string | Buffer | undefined = undefined;
 
     if (selectedWatermarkUrl) {
-      watermarkPath = (selectedWatermarkUrl.startsWith('/') && !selectedWatermarkUrl.startsWith('//'))
-        ? path.join(process.cwd(), 'public', selectedWatermarkUrl.slice(1))
-        : path.isAbsolute(selectedWatermarkUrl)
-          ? selectedWatermarkUrl
-          : path.join(process.cwd(), 'public', selectedWatermarkUrl);
+      if (selectedWatermarkUrl.startsWith('http')) {
+        console.log(`[ImageProcessor] Fetching remote watermark: ${selectedWatermarkUrl}`);
+        const res = await fetch(selectedWatermarkUrl);
+        if (res.ok) watermarkInput = Buffer.from(await res.arrayBuffer());
+      } else {
+        watermarkInput = (selectedWatermarkUrl.startsWith('/') && !selectedWatermarkUrl.startsWith('//'))
+          ? path.join(process.cwd(), 'public', selectedWatermarkUrl.slice(1))
+          : path.isAbsolute(selectedWatermarkUrl)
+            ? selectedWatermarkUrl
+            : path.join(process.cwd(), 'public', selectedWatermarkUrl);
+      }
     }
 
     if (selectedFrameUrl) {
-      framePath = (selectedFrameUrl.startsWith('/') && !selectedFrameUrl.startsWith('//'))
-        ? path.join(process.cwd(), 'public', selectedFrameUrl.slice(1))
-        : path.isAbsolute(selectedFrameUrl)
-          ? selectedFrameUrl
-          : path.join(process.cwd(), 'public', selectedFrameUrl);
+      if (selectedFrameUrl.startsWith('http')) {
+        console.log(`[ImageProcessor] Fetching remote frame: ${selectedFrameUrl}`);
+        const res = await fetch(selectedFrameUrl);
+        if (res.ok) frameInput = Buffer.from(await res.arrayBuffer());
+      } else {
+        frameInput = (selectedFrameUrl.startsWith('/') && !selectedFrameUrl.startsWith('//'))
+          ? path.join(process.cwd(), 'public', selectedFrameUrl.slice(1))
+          : path.isAbsolute(selectedFrameUrl)
+            ? selectedFrameUrl
+            : path.join(process.cwd(), 'public', selectedFrameUrl);
+      }
     }
 
     // 5. Process & Upload
@@ -163,8 +178,8 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
       buffer,
       filename,
       bucketName: process.env.S3_BUCKET_NAME || 'event-photos',
-      watermarkPath,
-      framePath,
+      watermarkInput,
+      frameInput,
     });
 
     // 6. DB Entry

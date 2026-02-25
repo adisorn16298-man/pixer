@@ -109,20 +109,34 @@ export default function EventManagement() {
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
-        for (let i = 0; i < files.length; i++) {
-            const formData = new FormData();
-            formData.append('file', files[i]);
-            formData.append('eventId', id as string);
-            if (selectedMomentId && selectedMomentId !== 'all') formData.append('momentId', selectedMomentId);
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const formData = new FormData();
+                formData.append('file', files[i]);
+                formData.append('eventId', id as string);
+                if (selectedMomentId && selectedMomentId !== 'all') formData.append('momentId', selectedMomentId);
 
-            const res = await fetch('/api/admin/photos/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            const photo = await res.json();
-            setEvent(prev => prev ? { ...prev, photos: [photo, ...prev.photos] } : null);
+                const res = await fetch('/api/admin/photos/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                    throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+                }
+
+                const photo = await res.json();
+                setEvent(prev => prev ? { ...prev, photos: [photo, ...prev.photos] } : null);
+            }
+        } catch (error: any) {
+            console.error('Upload process error:', error);
+            alert(`Error during upload: ${error.message}`);
+        } finally {
+            setIsUploading(false);
+            // Refresh event data to ensure UI is in sync
+            fetchEvent();
         }
-        setIsUploading(false);
     };
 
     const handleTemplateChange = async (templateId: string) => {
