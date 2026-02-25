@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  brandName      String?
+  brandLogoUrl   String?
+  watermarkUrl   String?
+  frameUrl       String?
+  watermarkPortraitUrl String?
+  framePortraitUrl     String?
+  whiteLabel      Boolean  @default(false)
+  jpegQuality     Int      @default(80)
+  thumbQuality    Int      @default(60)
+  templates      BrandingTemplate[]
+  events         Event[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model BrandingTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  frameUrl     String?
+  watermarkUrl String?
+  framePortraitUrl     String?
+  watermarkPortraitUrl String?
+  primaryColor         String?  @default("#6366f1") // Indigo-600 default
+  secondaryColor       String?  @default("#4f46e5") // Indigo-500 default
+  backgroundColor      String?  @default("#020617") // Slate-950 default
+  photographer User     @relation(fields: [photographerId], references: [id])
+  photographerId String
+  events       Event[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Event {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  slug            String   @unique
+  shortHash       String   @unique // Pixer-style short URL (e.g. g/abcd123)
+  date            DateTime
+  photographer    User     @relation(fields: [photographerId], references: [id])
+  photographerId  String
+  template        BrandingTemplate? @relation(fields: [templateId], references: [id])
+  templateId      String?
+  primaryColor    String?  @default("#6366f1")
+  secondaryColor  String?  @default("#4f46e5")
+  backgroundColor String?  @default("#020617")
+  moments         Moment[]
+  photos          Photo[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Moment {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "Morning Ceremony", "Reception"
+  event     Event    @relation(fields: [eventId], references: [id])
+  eventId   String
+  photos    Photo[]
+  createdAt DateTime @default(now())
+}
+
+model Photo {
+  id              String   @id @default(cuid())
+  event           Event    @relation(fields: [eventId], references: [id])
+  eventId         String
+  moment          Moment?  @relation(fields: [momentId], references: [id])
+  momentId        String?
+  originalKey     String
+  watermarkedKey  String
+  thumbnailKey    String
+  width           Int
+  height          Int
+  mimeType        String
+  gDriveFileId    String?
+  createdAt       DateTime @default(now())
+}
