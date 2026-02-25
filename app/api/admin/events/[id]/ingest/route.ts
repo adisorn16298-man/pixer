@@ -49,17 +49,29 @@ export async function POST(
         }
 
         const ingestPath = path.join(process.cwd(), 'ingest', event.slug);
+        const isVercel = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+        if (isVercel) {
+            return NextResponse.json({
+                error: 'Ingest folder is only available when running locally.',
+                isRemote: true,
+                path: ingestPath
+            }, { status: 400 });
+        }
 
         // Create directory recursively
         await fs.mkdir(ingestPath, { recursive: true });
 
         // Open in Windows Explorer
-        // explorer.exe [path]
         try {
-            await execAsync(`explorer.exe "${ingestPath}"`);
+            // Check if explorer.exe likely exists (Windows)
+            if (process.platform === 'win32') {
+                await execAsync(`explorer.exe "${ingestPath}"`);
+            } else if (process.platform === 'darwin') {
+                await execAsync(`open "${ingestPath}"`);
+            }
         } catch (execError) {
             console.error('Failed to open explorer:', execError);
-            // Non-blocking, folder is still created
         }
 
         return NextResponse.json({ success: true, path: ingestPath });

@@ -211,7 +211,16 @@ export default function EventManagement() {
     const handleOpenIngestFolder = async () => {
         try {
             const res = await fetch(`/api/admin/events/${id}/ingest`, { method: 'POST' });
-            if (!res.ok) throw new Error('Failed to open folder');
+            const data = await res.json();
+
+            if (!res.ok) {
+                if (data.isRemote) {
+                    alert('This feature requires PIXER to be running on your local computer.\n\nSince you are using the web version, please use the FTP upload method or the web upload button instead.');
+                } else {
+                    throw new Error(data.error || 'Failed to open folder');
+                }
+                return;
+            }
             // Show a temporary success state if needed
         } catch (error) {
             console.error('Open folder error:', error);
