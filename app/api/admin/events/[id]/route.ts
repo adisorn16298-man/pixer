@@ -50,7 +50,7 @@ export async function PATCH(
                 secondaryColor,
                 backgroundColor,
                 logoUrl
-            },
+            } as any,
         });
 
         return NextResponse.json(event);

@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import MasonryGallery from '@/components/MasonryGallery';
 import { notFound } from 'next/navigation';
-
-const prisma = new PrismaClient();
 
 export default async function PublicGallery({ params }: { params: { hash: string } }) {
     const event = await prisma.event.findUnique({
@@ -22,9 +20,11 @@ export default async function PublicGallery({ params }: { params: { hash: string
         notFound();
     }
 
+    const eventData = event as any;
+
     // Map database photos to Gallery format
     const s3Url = process.env.NEXT_PUBLIC_S3_PUBLIC_URL || '';
-    const photos = event.photos.map(p => ({
+    const photos = eventData.photos.map((p: any) => ({
         id: p.id,
         thumbnailUrl: s3Url ? `${s3Url}/${p.thumbnailKey}` : `/${p.thumbnailKey}`,
         watermarkedUrl: s3Url ? `${s3Url}/${p.watermarkedKey}` : `/${p.watermarkedKey}`,
@@ -33,14 +33,14 @@ export default async function PublicGallery({ params }: { params: { hash: string
         momentId: p.momentId || undefined,
     }));
 
-    const moments = event.moments.map(m => ({
+    const moments = eventData.moments.map((m: any) => ({
         id: m.id,
         name: m.name,
     }));
 
-    const primaryColor = event.primaryColor || '#6366f1';
-    const secondaryColor = event.secondaryColor || '#4f46e5';
-    const backgroundColor = event.backgroundColor || '#020617';
+    const primaryColor = eventData.primaryColor || '#6366f1';
+    const secondaryColor = eventData.secondaryColor || '#4f46e5';
+    const backgroundColor = eventData.backgroundColor || '#020617';
 
     return (
         <main className="min-h-screen transition-colors duration-700" style={{
@@ -56,16 +56,16 @@ export default async function PublicGallery({ params }: { params: { hash: string
                     style={{ backgroundColor: primaryColor }}
                 ></div>
                 <div className="relative z-10">
-                    {event.logoUrl ? (
-                        <img src={event.logoUrl} className="h-16 mx-auto mb-6 opacity-90 object-contain max-w-[200px]" alt="Event Logo" />
-                    ) : event.photographer.brandLogoUrl && (
-                        <img src={event.photographer.brandLogoUrl} className="h-12 mx-auto mb-6 opacity-80" alt="Brand Logo" />
+                    {eventData.logoUrl ? (
+                        <img src={eventData.logoUrl} className="h-16 mx-auto mb-6 opacity-90 object-contain max-w-[200px]" alt="Event Logo" />
+                    ) : eventData.photographer.brandLogoUrl && (
+                        <img src={eventData.photographer.brandLogoUrl} className="h-12 mx-auto mb-6 opacity-80" alt="Brand Logo" />
                     )}
                     <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-7xl mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                        {event.name}
+                        {eventData.name}
                     </h1>
                     <p className="font-medium tracking-widest uppercase text-sm mb-2" style={{ color: primaryColor }}>
-                        {new Date(event.date).toLocaleDateString('en-US', { dateStyle: 'full' })}
+                        {new Date(eventData.date).toLocaleDateString('en-US', { dateStyle: 'full' })}
                     </p>
                     <div
                         className="h-1 w-20 mx-auto rounded-full mt-6 shadow-lg"
@@ -78,8 +78,8 @@ export default async function PublicGallery({ params }: { params: { hash: string
                 <MasonryGallery
                     initialPhotos={photos}
                     moments={moments}
-                    eventId={event.id}
-                    brandName={event.photographer.brandName || event.photographer.name || undefined}
+                    eventId={eventData.id}
+                    brandName={eventData.photographer.brandName || eventData.photographer.name || undefined}
                     themeColor={primaryColor}
                 />
             </div>

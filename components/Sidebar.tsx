@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-export default function Sidebar() {
+export default function Sidebar({ photographerName = 'Photographer' }: { photographerName?: string }) {
     const pathname = usePathname();
 
     const navItems = [
@@ -39,7 +39,7 @@ export default function Sidebar() {
             <div className="p-4 border-t border-slate-800">
                 <div className="bg-slate-800/50 p-3 rounded-xl">
                     <p className="text-xs text-slate-500 uppercase font-bold tracking-widest mb-1">Photographer</p>
-                    <p className="text-sm font-medium text-slate-200">John Photographer</p>
+                    <p className="text-sm font-medium text-slate-200">{photographerName}</p>
                 </div>
             </div>
         </aside>
