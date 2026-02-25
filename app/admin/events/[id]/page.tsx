@@ -508,7 +508,7 @@ export default function EventManagement() {
                             ) : (
                                 filteredPhotos.map(p => (
                                     <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 group">
-                                        <img src={`/${p.thumbnailKey}`} className="w-full h-full object-cover" alt="Event" />
+                                        <img src={process.env.NEXT_PUBLIC_S3_PUBLIC_URL ? `${process.env.NEXT_PUBLIC_S3_PUBLIC_URL}/${p.thumbnailKey}` : `/${p.thumbnailKey}`} className="w-full h-full object-cover" alt="Event" />
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                                             <span className="text-[10px] text-slate-300 font-mono">{p.momentId ? 'Assigned' : 'Unassigned'}</span>
                                             <button

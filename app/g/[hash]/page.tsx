@@ -23,10 +23,11 @@ export default async function PublicGallery({ params }: { params: { hash: string
     }
 
     // Map database photos to Gallery format
+    const s3Url = process.env.NEXT_PUBLIC_S3_PUBLIC_URL || '';
     const photos = event.photos.map(p => ({
         id: p.id,
-        thumbnailUrl: `/${p.thumbnailKey}`, // Prepending / for local serving from public folder
-        watermarkedUrl: `/${p.watermarkedKey}`,
+        thumbnailUrl: s3Url ? `${s3Url}/${p.thumbnailKey}` : `/${p.thumbnailKey}`,
+        watermarkedUrl: s3Url ? `${s3Url}/${p.watermarkedKey}` : `/${p.watermarkedKey}`,
         width: p.width,
         height: p.height,
         momentId: p.momentId || undefined,

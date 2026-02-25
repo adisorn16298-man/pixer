@@ -41,8 +41,12 @@ export async function POST(request: Request) {
         });
 
         return NextResponse.json(event);
-    } catch (error) {
-        console.error(error);
-        return NextResponse.json({ error: 'Failed to create event' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Event Creation Error:', error);
+        return NextResponse.json({
+            error: 'Failed to create event',
+            details: error.message || 'Unknown error',
+            code: error.code || 'NO_CODE'
+        }, { status: 500 });
     }
 }

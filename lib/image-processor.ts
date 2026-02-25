@@ -185,7 +185,7 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
     const result = await processAndUploadImage({
       buffer,
       filename,
-      bucketName: 'event-photos',
+      bucketName: process.env.S3_BUCKET_NAME || 'event-photos',
       watermarkPath,
       framePath,
     });
