@@ -111,9 +111,17 @@ export default function EventManagement() {
 
         setIsUploading(true);
         try {
+            const { compressImage } = await import('@/lib/image-client-utils');
+
             for (let i = 0; i < files.length; i++) {
+                const originalFile = files[i];
+                console.log(`[Upload] Processing file: ${originalFile.name}`);
+
+                // Compress if needed
+                const fileToUpload = await compressImage(originalFile);
+
                 const formData = new FormData();
-                formData.append('file', files[i]);
+                formData.append('file', fileToUpload);
                 formData.append('eventId', id as string);
                 if (selectedMomentId && selectedMomentId !== 'all') formData.append('momentId', selectedMomentId);
 
