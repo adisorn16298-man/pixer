@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Masonry from 'react-responsive-masonry';
+import Masonry, { ResponsiveMasonry } from 'react-responsive-masonry';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Photo {
@@ -186,52 +186,56 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                 </button>
             </div>
 
-            <Masonry columnsCount={3} gutter="16px">
-                {filteredPhotos.map((photo) => (
-                    <motion.div
-                        key={photo.id}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        whileHover={{ y: -5 }}
-                        className="relative cursor-pointer overflow-hidden rounded-xl shadow-2xl group border border-slate-800"
-                    >
-                        <img
-                            src={photo.thumbnailUrl}
-                            alt="Event"
-                            onClick={() => isSelectionMode ? toggleSelection(photo.id) : setSelectedPhoto(photo)}
-                            className={`w-full h-auto block transition-all ${isSelectionMode ? 'scale-90 group-hover:scale-95' : 'group-hover:scale-105'}`}
-                            loading="lazy"
-                        />
+            <ResponsiveMasonry
+                columnsCountBreakPoints={{ 350: 2, 750: 3, 900: 4 }}
+            >
+                <Masonry gutter="12px">
+                    {filteredPhotos.map((photo) => (
+                        <motion.div
+                            key={photo.id}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ y: -5 }}
+                            className="relative cursor-pointer overflow-hidden rounded-xl shadow-2xl group border border-slate-800"
+                        >
+                            <img
+                                src={photo.thumbnailUrl}
+                                alt="Event"
+                                onClick={() => isSelectionMode ? toggleSelection(photo.id) : setSelectedPhoto(photo)}
+                                className={`w-full h-auto block transition-all ${isSelectionMode ? 'scale-90 group-hover:scale-95' : 'group-hover:scale-105'}`}
+                                loading="lazy"
+                            />
 
-                        {/* Selection Checkbox */}
-                        {isSelectionMode && (
-                            <div
-                                className={`absolute top-3 left-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedIds.has(photo.id) ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-black/20 border-white/50'}`}
-                                onClick={(e) => toggleSelection(photo.id, e)}
-                            >
-                                {selectedIds.has(photo.id) && <CheckIcon />}
+                            {/* Selection Checkbox */}
+                            {isSelectionMode && (
+                                <div
+                                    className={`absolute top-3 left-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedIds.has(photo.id) ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-black/20 border-white/50'}`}
+                                    onClick={(e) => toggleSelection(photo.id, e)}
+                                >
+                                    {selectedIds.has(photo.id) && <CheckIcon />}
+                                </div>
+                            )}
+                            {/* Overlay Actions */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4 pointer-events-none">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDownload(photo); }}
+                                    className="p-2 rounded-full text-white pointer-events-auto shadow-lg"
+                                    style={{ backgroundColor: primaryColor }}
+                                >
+                                    <DownloadIcon />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleShare(photo); }}
+                                    className="p-2 rounded-full text-white pointer-events-auto shadow-lg"
+                                    style={{ backgroundColor: primaryColor }}
+                                >
+                                    <ShareIcon />
+                                </button>
                             </div>
-                        )}
-                        {/* Overlay Actions */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4 pointer-events-none">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDownload(photo); }}
-                                className="p-2 rounded-full text-white pointer-events-auto shadow-lg"
-                                style={{ backgroundColor: primaryColor }}
-                            >
-                                <DownloadIcon />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleShare(photo); }}
-                                className="p-2 rounded-full text-white pointer-events-auto shadow-lg"
-                                style={{ backgroundColor: primaryColor }}
-                            >
-                                <ShareIcon />
-                            </button>
-                        </div>
-                    </motion.div>
-                ))}
-            </Masonry>
+                        </motion.div>
+                    ))}
+                </Masonry>
+            </ResponsiveMasonry>
 
             {/* Lightbox / Modal */}
             <AnimatePresence>
