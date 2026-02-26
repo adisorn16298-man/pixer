@@ -206,18 +206,22 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
 async function getBufferFromKey(key: string): Promise<Buffer> {
   const { isS3Enabled, getObjectFromS3 } = await import('./s3-upload');
 
-  if (isS3Enabled) {
-    const response = await getObjectFromS3(key);
-    const body = response.Body as any;
-    // Helper to convert stream to buffer
-    const chunks: any[] = [];
-    for await (const chunk of body) {
-      chunks.push(chunk);
+  try {
+    if (isS3Enabled) {
+      console.log(`[ImageProcessor] Fetching from S3: ${key}`);
+      const response = await getObjectFromS3(key);
+      if (!response.Body) throw new Error('S3 Response Body is empty');
+
+      const bytes = await (response.Body as any).transformToByteArray();
+      return Buffer.from(bytes);
+    } else {
+      const localPath = path.join(process.cwd(), 'public', key);
+      console.log(`[ImageProcessor] Reading local file: ${localPath}`);
+      return await fs.readFile(localPath);
     }
-    return Buffer.concat(chunks);
-  } else {
-    const localPath = path.join(process.cwd(), 'public', key);
-    return await fs.readFile(localPath);
+  } catch (err: any) {
+    console.error(`[ImageProcessor] Error in getBufferFromKey for ${key}:`, err);
+    throw new Error(`Failed to read photo data: ${err.message}`);
   }
 }
 
@@ -234,13 +238,16 @@ export async function reprocessPhoto(photoId: string) {
 
     // 1. Get original buffer
     const buffer = await getBufferFromKey(photo.originalKey);
+    console.log(`[ImageProcessor] Original buffer loaded: ${buffer.length} bytes`);
 
     // 2. Identify orientation
     const metadata = await sharp(buffer).metadata();
+    console.log(`[ImageProcessor] Metadata loaded, isPortrait: ${(metadata.height || 0) > (metadata.width || 0)}`);
     const isPortrait = (metadata.height || 0) > (metadata.width || 0);
 
     // 3. Resolve branding inputs (using the same logic as processPhotoForEvent)
     const user = await prisma.user.findFirst();
+    console.log(`[ImageProcessor] User settings loaded: ${user?.brandName}`);
 
     let selectedWatermarkUrl = isPortrait
       ? ((photo.event?.template as any)?.watermarkPortraitUrl || (user as any)?.watermarkPortraitUrl || (photo.event?.template as any)?.watermarkUrl || (user as any)?.watermarkUrl)

@@ -10,6 +10,7 @@ export async function POST(
 ) {
     try {
         const { id } = params;
+        console.log(`[ReprocessAPI] Request for event ID: ${id}`);
 
         const event = await prisma.event.findUnique({
             where: { id },
@@ -17,25 +18,29 @@ export async function POST(
         });
 
         if (!event) {
+            console.warn(`[ReprocessAPI] Event not found: ${id}`);
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
+
+        console.log(`[ReprocessAPI] Event found: ${event.name}. Fetching photos...`);
 
         const photos = await prisma.photo.findMany({
             where: { eventId: id },
             select: { id: true }
         });
 
-        console.log(`[ReprocessAPI] Starting branding update for ${photos.length} photos in event "${event.name}"`);
+        console.log(`[ReprocessAPI] Found ${photos.length} photos. Starting loop...`);
 
         // We reprocess photos sequentially to avoid overloading the system
         const results = [];
         for (const photo of photos) {
             try {
+                console.log(`[ReprocessAPI] Processing photo ${photo.id}...`);
                 await reprocessPhoto(photo.id);
                 results.push({ id: photo.id, status: 'success' });
-            } catch (err) {
-                console.error(`[ReprocessAPI] Failed to reprocess photo ${photo.id}:`, err);
-                results.push({ id: photo.id, status: 'failed' });
+            } catch (err: any) {
+                console.error(`[ReprocessAPI] Failed to reprocess photo ${photo.id}: ${err.message}`, err);
+                results.push({ id: photo.id, status: 'failed', error: err.message });
             }
         }
 

@@ -184,7 +184,10 @@ export default function EventManagement() {
                 method: 'POST',
             });
 
-            if (!res.ok) throw new Error('Failed to reprocess branding');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || `Reprocess failed with status ${res.status}`);
+            }
 
             const data = await res.json();
             alert(data.message);
