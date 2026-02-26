@@ -45,6 +45,16 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     const handleShare = async (photo: Photo) => {
         const shareUrl = `${window.location.origin}/api/photos/download?photoId=${photo.id}`;
 
+        // Always copy to clipboard first as a robust fallback
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            setShowCopied(true);
+            setTimeout(() => setShowCopied(false), 2000);
+        } catch (clipErr) {
+            console.error('Initial clipboard copy failed:', clipErr);
+        }
+
+        // Then try native share if available
         if (navigator.share) {
             try {
                 await navigator.share({
@@ -52,16 +62,10 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                     url: shareUrl,
                 });
             } catch (err) {
-                console.log('Share failed or cancelled');
-            }
-        } else {
-            // Fallback to clipboard
-            try {
-                await navigator.clipboard.writeText(shareUrl);
-                setShowCopied(true);
-                setTimeout(() => setShowCopied(false), 2000);
-            } catch (err) {
-                alert('Failed to copy link');
+                // If it's not a user cancellation, maybe log it
+                if ((err as Error).name !== 'AbortError') {
+                    console.error('Native share failed:', err);
+                }
             }
         }
     };
@@ -155,11 +159,12 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                         </div>
 
                         {/* Actions */}
-                        <div className="py-6 flex gap-4 md:gap-8 shrink-0" onClick={(e) => e.stopPropagation()}>
-                            <button onClick={() => handleDownload(selectedPhoto)} className="flex items-center gap-2 bg-slate-800 px-6 py-3 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700 text-sm md:text-base font-medium">
+                        <div className="py-6 flex flex-wrap justify-center gap-3 md:gap-6 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <button onClick={() => handleDownload(selectedPhoto)} className="flex items-center gap-2 bg-slate-800 px-5 py-3 rounded-xl hover:bg-slate-700 transition-colors border border-slate-700 text-sm font-medium">
                                 <DownloadIcon /> Download
                             </button>
-                            <button onClick={() => handleShare(selectedPhoto)} className="relative flex items-center gap-2 text-white px-6 py-3 rounded-xl transition-all shadow-lg text-sm md:text-base font-medium" style={{ backgroundColor: primaryColor }}>
+
+                            <button onClick={() => handleShare(selectedPhoto)} className="relative flex items-center gap-2 text-white px-5 py-3 rounded-xl transition-all shadow-lg text-sm font-medium" style={{ backgroundColor: primaryColor }}>
                                 <ShareIcon /> Share
                                 <AnimatePresence>
                                     {showCopied && (
@@ -167,12 +172,22 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: -45 }}
                                             exit={{ opacity: 0 }}
-                                            className="absolute left-1/2 -translate-x-1/2 bg-white text-[10px] md:text-xs text-slate-900 px-3 py-1 rounded-full shadow-xl whitespace-nowrap font-black pointer-events-none"
+                                            className="absolute left-1/2 -translate-x-1/2 bg-white text-[10px] text-slate-900 px-3 py-1 rounded-full shadow-xl whitespace-nowrap font-black pointer-events-none"
                                         >
                                             LINK COPIED! 🔗
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
+                            </button>
+
+                            <button onClick={() => {
+                                const shareUrl = `${window.location.origin}/api/photos/download?photoId=${selectedPhoto.id}`;
+                                navigator.clipboard.writeText(shareUrl).then(() => {
+                                    setShowCopied(true);
+                                    setTimeout(() => setShowCopied(false), 2000);
+                                });
+                            }} className="flex items-center gap-2 bg-slate-900/50 px-5 py-3 rounded-xl hover:bg-slate-800 transition-colors border border-slate-800 text-sm font-medium text-slate-300">
+                                📋 Copy Link
                             </button>
                         </div>
                     </motion.div>

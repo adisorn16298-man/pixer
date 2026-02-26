@@ -4,7 +4,7 @@ import { processPhotoForEvent } from '@/lib/image-processor';
 import { getOrCreateFolder, uploadToDrive } from '@/lib/gdrive';
 
 // Increase body size limit for photo uploads
-export const maxDuration = 60; // 60 seconds
+export const maxDuration = 300; // 300 seconds (5 minutes)
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
         const event = await prisma.event.findUnique({
             where: { id: eventId },
-            select: { slug: true, name: true }
+            select: { id: true, slug: true, name: true }
         });
 
         if (!event) {
@@ -41,25 +41,27 @@ export async function POST(request: Request) {
         );
         console.log('Upload and processing successful:', photo.id);
 
-        // --- GDrive Archiving ---
-        console.log(`[UploadAPI] ☁️  Archiving to Google Drive...`);
-        try {
-            const rootFolderId = await getOrCreateFolder('PIXER_ARCHIVE');
-            const eventFolderId = await getOrCreateFolder(event.slug, rootFolderId || undefined);
+        // --- GDrive Archiving (NON-BLOCKING) ---
+        // We trigger this but don't 'await' it so the response can be sent back immediately
+        (async () => {
+            console.log(`[UploadAPI-Background] ☁️  Archiving photo ${photo.id} to Google Drive...`);
+            try {
+                const rootFolderId = await getOrCreateFolder('PIXER_ARCHIVE');
+                const eventFolderId = await getOrCreateFolder(event.slug, rootFolderId || undefined);
 
-            const gDriveFile = await uploadToDrive(buffer, file.name, eventFolderId || undefined);
+                const gDriveFile = await uploadToDrive(buffer, file.name, eventFolderId || undefined);
 
-            if (gDriveFile.id) {
-                await prisma.photo.update({
-                    where: { id: photo.id },
-                    data: { gDriveFileId: gDriveFile.id }
-                });
-                console.log(`[UploadAPI] ✅ Archived to Google Drive: ${gDriveFile.id}`);
+                if (gDriveFile.id) {
+                    await prisma.photo.update({
+                        where: { id: photo.id },
+                        data: { gDriveFileId: gDriveFile.id }
+                    });
+                    console.log(`[UploadAPI-Background] ✅ Archived to Google Drive: ${gDriveFile.id}`);
+                }
+            } catch (gdriveError) {
+                console.error(`[UploadAPI-Background] ⚠️  Google Drive Archive Failed for photo ${photo.id}:`, gdriveError);
             }
-        } catch (gdriveError) {
-            console.error(`[UploadAPI] ⚠️  Google Drive Archive Failed:`, gdriveError);
-            // We don't fail the whole request just because archive failed
-        }
+        })();
 
         return NextResponse.json(photo);
     } catch (error) {

@@ -33,6 +33,7 @@ export default function EventManagement() {
     const router = useRouter();
     const [event, setEvent] = useState<EventDetail | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadStatus, setUploadStatus] = useState({ current: 0, total: 0, errors: 0 });
     const [newMomentName, setNewMomentName] = useState('');
     const [editingMomentId, setEditingMomentId] = useState<string | null>(null);
     const [editingMomentName, setEditingMomentName] = useState('');
@@ -110,37 +111,59 @@ export default function EventManagement() {
         if (!files || files.length === 0) return;
 
         setIsUploading(true);
+        setUploadStatus({ current: 0, total: files.length, errors: 0 });
+
         try {
             const { compressImage } = await import('@/lib/image-client-utils');
 
             for (let i = 0; i < files.length; i++) {
+                setUploadStatus(prev => ({ ...prev, current: i + 1 }));
                 const originalFile = files[i];
-                console.log(`[Upload] Processing file: ${originalFile.name}`);
+                console.log(`[Upload] Processing file ${i + 1}/${files.length}: ${originalFile.name}`);
 
-                // Compress if needed
-                const fileToUpload = await compressImage(originalFile);
+                let retryCount = 0;
+                const MAX_RETRIES = 3;
+                let success = false;
 
-                const formData = new FormData();
-                formData.append('file', fileToUpload);
-                formData.append('eventId', id as string);
-                if (selectedMomentId && selectedMomentId !== 'all') formData.append('momentId', selectedMomentId);
+                while (retryCount <= MAX_RETRIES && !success) {
+                    try {
+                        // Compress if needed
+                        const fileToUpload = await compressImage(originalFile);
 
-                const res = await fetch('/api/admin/photos/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
+                        const formData = new FormData();
+                        formData.append('file', fileToUpload);
+                        formData.append('eventId', id as string);
+                        if (selectedMomentId && selectedMomentId !== 'all') formData.append('momentId', selectedMomentId);
 
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
-                    throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+                        const res = await fetch('/api/admin/photos/upload', {
+                            method: 'POST',
+                            body: formData,
+                        });
+
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({ error: 'Upload failed' }));
+                            throw new Error(errorData.error || `Upload failed with status ${res.status}`);
+                        }
+
+                        const photo = await res.json();
+                        setEvent(prev => prev ? { ...prev, photos: [photo, ...prev.photos] } : null);
+                        success = true;
+                    } catch (error: any) {
+                        retryCount++;
+                        console.warn(`[Upload] Attempt ${retryCount} failed for ${originalFile.name}:`, error.message);
+                        if (retryCount > MAX_RETRIES) {
+                            setUploadStatus(prev => ({ ...prev, errors: prev.errors + 1 }));
+                            console.error(`[Upload] All retries failed for ${originalFile.name}`);
+                        } else {
+                            // Wait a bit before retry
+                            await new Promise(r => setTimeout(r, 1000 * retryCount));
+                        }
+                    }
                 }
-
-                const photo = await res.json();
-                setEvent(prev => prev ? { ...prev, photos: [photo, ...prev.photos] } : null);
             }
         } catch (error: any) {
-            console.error('Upload process error:', error);
-            alert(`Error during upload: ${error.message}`);
+            console.error('Critical upload loop error:', error);
+            alert(`Critical error during upload batch: ${error.message}`);
         } finally {
             setIsUploading(false);
             // Refresh event data to ensure UI is in sync
@@ -351,6 +374,41 @@ export default function EventManagement() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Upload Progress Overlay */}
+                {isUploading && (
+                    <div className="fixed bottom-10 right-10 z-50 animate-in slide-in-from-bottom-5">
+                        <div className="bg-slate-900 border border-slate-700 p-6 rounded-3xl shadow-2xl flex items-center gap-6 min-w-[320px]">
+                            <div className="relative h-16 w-16">
+                                <svg className="h-full w-full transform -rotate-90">
+                                    <circle
+                                        cx="32" cy="32" r="28"
+                                        stroke="currentColor" strokeWidth="4" fill="transparent"
+                                        className="text-slate-800"
+                                    />
+                                    <circle
+                                        cx="32" cy="32" r="28"
+                                        stroke="currentColor" strokeWidth="4" fill="transparent"
+                                        strokeDasharray={175.9}
+                                        strokeDashoffset={175.9 * (1 - uploadStatus.current / uploadStatus.total)}
+                                        className="transition-all duration-500"
+                                        style={{ color: currentPrimary }}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                                    {Math.round((uploadStatus.current / uploadStatus.total) * 100)}%
+                                </div>
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold mb-1">Uploading Photos</h4>
+                                <p className="text-xs text-slate-400">
+                                    Processing {uploadStatus.current} of {uploadStatus.total}
+                                    {uploadStatus.errors > 0 && <span className="text-red-500 ml-2">({uploadStatus.errors} errors)</span>}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Moments Sidebar */}
                 <div className="lg:col-span-1 space-y-6">
                     {/* QR Code Section */}
