@@ -761,6 +761,13 @@ export default function EventManagement() {
                                     <div key={p.id} className="relative aspect-square rounded-xl overflow-hidden border border-slate-800 group">
                                         <img src={process.env.NEXT_PUBLIC_S3_PUBLIC_URL ? `${process.env.NEXT_PUBLIC_S3_PUBLIC_URL}/${p.thumbnailKey}` : `/${p.thumbnailKey}`} className="w-full h-full object-cover" alt="Event" />
                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                                            <div className="flex flex-col items-center mb-1">
+                                                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-tighter">Engagement Stats</span>
+                                                <div className="flex gap-3 text-[11px] text-white font-mono">
+                                                    <span title="Downloads">📥 {p.downloadCount || 0}</span>
+                                                    <span title="Shares">🔗 {p.shareCount || 0}</span>
+                                                </div>
+                                            </div>
                                             <span className="text-[10px] text-slate-300 font-mono">{p.momentId ? 'Assigned' : 'Unassigned'}</span>
                                             <button
                                                 onClick={() => setDeleteConfig({ type: 'photo', id: p.id })}

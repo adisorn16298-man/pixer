@@ -91,6 +91,9 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
         // Then try native share if available
         if (navigator.share) {
             try {
+                // Track share
+                fetch(`/api/photos/${photo.id}/share`, { method: 'POST' }).catch(err => console.error('Failed to track share:', err));
+
                 await navigator.share({
                     title: 'Check out this photo!',
                     url: shareUrl,

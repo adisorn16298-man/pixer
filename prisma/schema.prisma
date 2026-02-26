@@ -87,5 +87,7 @@ model Photo {
   height          Int
   mimeType        String
   gDriveFileId    String?
+  downloadCount   Int      @default(0)
+  shareCount      Int      @default(0)
   createdAt       DateTime @default(now())
 }

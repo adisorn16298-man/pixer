@@ -20,6 +20,12 @@ export async function GET(req: NextRequest) {
             return new NextResponse('Photo not found', { status: 404 });
         }
 
+        // Increment download count
+        await prisma.photo.update({
+            where: { id: photoId },
+            data: { downloadCount: { increment: 1 } }
+        });
+
         const { isS3Enabled, getObjectFromS3 } = await import('@/lib/s3-upload');
         const fileName = `pixer-${photo.id}.jpg`;
 
