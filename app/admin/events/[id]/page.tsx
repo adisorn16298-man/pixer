@@ -177,20 +177,42 @@ export default function EventManagement() {
         if (!confirm('Are you sure you want to update branding for ALL photos in this event? This will use the current watermark and frame settings.')) return;
 
         setIsReprocessing(true);
-        setReprocessStatus({ current: 0, total: 100, message: 'Starting...' });
+        setReprocessStatus({ current: 0, total: 0, message: 'Fetching IDs...' });
 
         try {
-            const res = await fetch(`/api/admin/events/${id}/reprocess`, {
-                method: 'POST',
-            });
+            // 1. Get the list of photo IDs to reprocess
+            const listRes = await fetch(`/api/admin/events/${id}/reprocess`, { method: 'POST' });
+            if (!listRes.ok) throw new Error('Failed to fetch photo list');
 
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.error || `Reprocess failed with status ${res.status}`);
+            const { photos: photoIds, total } = await listRes.json();
+            setReprocessStatus({ current: 0, total, message: `Processing 0 of ${total}` });
+
+            let successCount = 0;
+            let failCount = 0;
+
+            // 2. Process each photo individually to prevent 504 Timeouts
+            for (let i = 0; i < photoIds.length; i++) {
+                const photoId = photoIds[i];
+                setReprocessStatus(prev => ({
+                    ...prev,
+                    current: i + 1,
+                    message: `Processing photo ${i + 1} of ${total}`
+                }));
+
+                try {
+                    const res = await fetch(`/api/admin/photos/${photoId}/reprocess`, { method: 'POST' });
+                    if (!res.ok) {
+                        const err = await res.json().catch(() => ({}));
+                        throw new Error(err.error || 'Failed');
+                    }
+                    successCount++;
+                } catch (err) {
+                    console.error(`Failed to reprocess photo ${photoId}:`, err);
+                    failCount++;
+                }
             }
 
-            const data = await res.json();
-            alert(data.message);
+            alert(`Branding update complete!\n\n✅ Success: ${successCount}\n❌ Failed: ${failCount}`);
         } catch (error: any) {
             console.error('Reprocess error:', error);
             alert(`Error during update: ${error.message}`);
@@ -442,13 +464,30 @@ export default function EventManagement() {
                 {/* Reprocess Progress Overlay */}
                 {isReprocessing && (
                     <div className="fixed bottom-10 right-10 z-50 animate-in slide-in-from-bottom-5">
-                        <div className="bg-slate-900 border border-indigo-500/50 p-6 rounded-3xl shadow-2xl flex items-center gap-6 min-w-[320px]">
-                            <div className="h-12 w-12 flex items-center justify-center bg-indigo-600/20 rounded-full animate-spin">
-                                ⚙️
+                        <div className="bg-slate-900 border border-indigo-500/50 p-6 rounded-3xl shadow-2xl flex items-center gap-6 min-w-[340px]">
+                            <div className="relative h-14 w-14">
+                                <svg className="h-full w-full transform -rotate-90">
+                                    <circle
+                                        cx="28" cy="28" r="24"
+                                        stroke="currentColor" strokeWidth="4" fill="transparent"
+                                        className="text-slate-800"
+                                    />
+                                    <circle
+                                        cx="28" cy="28" r="24"
+                                        stroke="currentColor" strokeWidth="4" fill="transparent"
+                                        strokeDasharray={150.8}
+                                        strokeDashoffset={reprocessStatus.total > 0 ? 150.8 * (1 - reprocessStatus.current / reprocessStatus.total) : 150.8}
+                                        className="transition-all duration-300"
+                                        style={{ color: currentPrimary }}
+                                    />
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                                    {reprocessStatus.total > 0 ? Math.round((reprocessStatus.current / reprocessStatus.total) * 100) : 0}%
+                                </div>
                             </div>
                             <div className="flex-1">
-                                <h4 className="text-white font-bold mb-1">Updating Branding</h4>
-                                <p className="text-xs text-slate-400">Please wait while we re-process all photos...</p>
+                                <h4 className="text-white font-bold text-sm mb-0.5">Updating Branding</h4>
+                                <p className="text-[10px] text-slate-400 font-medium">{reprocessStatus.message}</p>
                             </div>
                         </div>
                     </div>
