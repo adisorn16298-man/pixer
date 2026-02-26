@@ -10,7 +10,7 @@ interface EventDetail {
     name: string;
     shortHash: string;
     moments: { id: string; name: string; _count: { photos: number } }[];
-    photos: { id: string; thumbnailKey: string; momentId: string | null }[];
+    photos: { id: string; thumbnailKey: string; momentId: string | null; downloadCount?: number; shareCount?: number }[];
     template?: { id: string; name: string } | null;
     templateId?: string | null;
     primaryColor?: string | null;

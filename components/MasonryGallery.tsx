@@ -11,6 +11,8 @@ interface Photo {
     width: number;
     height: number;
     momentId?: string;
+    downloadCount?: number;
+    shareCount?: number;
 }
 
 interface Moment {
