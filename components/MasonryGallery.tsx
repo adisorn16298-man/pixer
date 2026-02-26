@@ -37,6 +37,40 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     const filteredPhotos = activeMoment === 'all'
         ? photos
         : photos.filter(p => p.momentId === activeMoment);
+
+    const currentIndex = selectedPhoto ? filteredPhotos.findIndex(p => p.id === selectedPhoto.id) : -1;
+
+    const handleNext = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (currentIndex < filteredPhotos.length - 1) {
+            setSelectedPhoto(filteredPhotos[currentIndex + 1]);
+        } else {
+            setSelectedPhoto(filteredPhotos[0]); // Wrap to beginning
+        }
+    };
+
+    const handlePrev = (e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        if (currentIndex > 0) {
+            setSelectedPhoto(filteredPhotos[currentIndex - 1]);
+        } else {
+            setSelectedPhoto(filteredPhotos[filteredPhotos.length - 1]); // Wrap to end
+        }
+    };
+
+    // Keyboard support
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!selectedPhoto) return;
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'ArrowLeft') handlePrev();
+            if (e.key === 'Escape') setSelectedPhoto(null);
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedPhoto, currentIndex, filteredPhotos]);
+
     const handleDownload = (photo: Photo) => {
         console.log('[Gallery] Triggering download for photo:', photo.id);
         window.location.assign(`/api/photos/download?photoId=${photo.id}`);
@@ -143,19 +177,49 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                     >
                         {/* Image Wrapper */}
                         <div className="relative w-full flex-1 flex flex-col items-center justify-center overflow-hidden">
+                            {/* Previous Button */}
+                            <button
+                                onClick={handlePrev}
+                                className="absolute left-4 z-20 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all border border-white/10 hidden md:block"
+                            >
+                                <ChevronLeftIcon />
+                            </button>
+
                             <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className="relative max-w-full max-h-full flex items-center justify-center"
+                                key={selectedPhoto.id}
+                                initial={{ scale: 0.9, opacity: 0, x: 20 }}
+                                animate={{ scale: 1, opacity: 1, x: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, x: -20 }}
+                                className="relative max-w-full max-h-full flex items-center justify-center p-4"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <img
                                     src={selectedPhoto.watermarkedUrl}
-                                    className="max-w-full max-h-[75vh] md:max-h-[85vh] rounded-lg shadow-2xl object-contain"
-                                    style={{ boxShadow: `0 20px 50px ${primaryColor}44` }}
+                                    className="max-w-full max-h-[75vh] md:max-h-[85vh] rounded-lg shadow-2xl object-contain select-none shadow-indigo-500/20"
+                                    style={{ boxShadow: `0 30px 60px -12px ${primaryColor}66` }}
                                     alt="Selected"
                                 />
+
+                                {/* Mobile Navigation Zones (Hotspots) */}
+                                <div className="absolute inset-y-0 left-0 w-1/3 md:hidden" onClick={handlePrev}></div>
+                                <div className="absolute inset-y-0 right-0 w-1/3 md:hidden" onClick={handleNext}></div>
                             </motion.div>
+
+                            {/* Next Button */}
+                            <button
+                                onClick={handleNext}
+                                className="absolute right-4 z-20 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all border border-white/10 hidden md:block"
+                            >
+                                <ChevronRightIcon />
+                            </button>
+
+                            {/* Close Button Top Right */}
+                            <button
+                                onClick={() => setSelectedPhoto(null)}
+                                className="absolute top-4 right-4 z-20 p-2 text-white/50 hover:text-white transition-colors"
+                            >
+                                <CloseIcon />
+                            </button>
                         </div>
 
                         {/* Actions */}
@@ -196,6 +260,24 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
         </div>
     );
 }
+
+const ChevronLeftIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+    </svg>
+);
+
+const ChevronRightIcon = () => (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+    </svg>
+);
+
+const CloseIcon = () => (
+    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
 
 const DownloadIcon = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
