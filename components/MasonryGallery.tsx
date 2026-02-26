@@ -32,6 +32,49 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     const [activeMoment, setActiveMoment] = useState<string>('all');
     const [showCopied, setShowCopied] = useState(false);
 
+    // Selection Mode
+    const [isSelectionMode, setIsSelectionMode] = useState(false);
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [isDownloadingBulk, setIsDownloadingBulk] = useState(false);
+
+    const toggleSelection = (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const handleBulkDownload = async () => {
+        if (selectedIds.size === 0) return;
+        setIsDownloadingBulk(true);
+        try {
+            const response = await fetch('/api/photos/bulk-download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photoIds: Array.from(selectedIds) }),
+            });
+
+            if (!response.ok) throw new Error('Bulk download failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pixer-photos-${new Date().getTime()}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            console.error('Bulk download error:', error);
+            alert('Failed to download photos as ZIP. Please try again.');
+        } finally {
+            setIsDownloadingBulk(false);
+        }
+    };
+
     const primaryColor = themeColor || '#6366f1';
 
     const filteredPhotos = activeMoment === 'all'
@@ -108,12 +151,12 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     };
     return (
         <div className="p-4 text-slate-200">
-            {/* Moments Tabs */}
-            {moments && moments.length > 0 && (
-                <div className="flex gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
+            {/* Header / Moments Tabs */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar w-full md:w-auto">
                     <button
                         onClick={() => setActiveMoment('all')}
-                        className={`px-6 py-2 rounded-full transition-all whitespace-nowrap ${activeMoment === 'all' ? 'text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
+                        className={`px-6 py-2 rounded-full transition-all whitespace-nowrap text-sm font-bold ${activeMoment === 'all' ? 'text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
                         style={activeMoment === 'all' ? { backgroundColor: primaryColor } : {}}
                     >
                         All Photos
@@ -122,14 +165,24 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                         <button
                             key={moment.id}
                             onClick={() => setActiveMoment(moment.id)}
-                            className={`px-6 py-2 rounded-full transition-all whitespace-nowrap ${activeMoment === moment.id ? 'text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
+                            className={`px-6 py-2 rounded-full transition-all whitespace-nowrap text-sm font-bold ${activeMoment === moment.id ? 'text-white shadow-lg' : 'bg-slate-800 hover:bg-slate-700'}`}
                             style={activeMoment === moment.id ? { backgroundColor: primaryColor } : {}}
                         >
                             {moment.name}
                         </button>
                     ))}
                 </div>
-            )}
+
+                <button
+                    onClick={() => {
+                        setIsSelectionMode(!isSelectionMode);
+                        if (isSelectionMode) setSelectedIds(new Set());
+                    }}
+                    className={`px-5 py-2 rounded-xl text-sm font-bold transition-all border flex items-center gap-2 ${isSelectionMode ? 'bg-white text-slate-900 border-white' : 'bg-slate-900/50 text-white border-slate-700 hover:bg-slate-800'}`}
+                >
+                    {isSelectionMode ? 'Cancel Selection' : 'Select Photos'}
+                </button>
+            </div>
 
             <Masonry columnsCount={3} gutter="16px">
                 {filteredPhotos.map((photo) => (
@@ -143,10 +196,20 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                         <img
                             src={photo.thumbnailUrl}
                             alt="Event"
-                            onClick={() => setSelectedPhoto(photo)}
-                            className="w-full h-auto block transition-transform group-hover:scale-105"
+                            onClick={() => isSelectionMode ? toggleSelection(photo.id) : setSelectedPhoto(photo)}
+                            className={`w-full h-auto block transition-all ${isSelectionMode ? 'scale-90 group-hover:scale-95' : 'group-hover:scale-105'}`}
                             loading="lazy"
                         />
+
+                        {/* Selection Checkbox */}
+                        {isSelectionMode && (
+                            <div
+                                className={`absolute top-3 left-3 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedIds.has(photo.id) ? 'bg-indigo-500 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-black/20 border-white/50'}`}
+                                onClick={(e) => toggleSelection(photo.id, e)}
+                            >
+                                {selectedIds.has(photo.id) && <CheckIcon />}
+                            </div>
+                        )}
                         {/* Overlay Actions */}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4 pointer-events-none">
                             <button
@@ -268,9 +331,56 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                     </motion.div>
                 )}
             </AnimatePresence>
+            {/* Bulk Actions Fixed Bar */}
+            <AnimatePresence>
+                {isSelectionMode && selectedIds.size > 0 && (
+                    <motion.div
+                        initial={{ y: 100 }}
+                        animate={{ y: 0 }}
+                        exit={{ y: 100 }}
+                        className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-lg"
+                    >
+                        <div className="bg-slate-900 border border-indigo-500/50 p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl">
+                            <div className="pl-2">
+                                <span className="text-white font-bold text-sm block">{selectedIds.size} Photos Selected</span>
+                                <button
+                                    onClick={() => setSelectedIds(new Set())}
+                                    className="text-[10px] text-slate-400 font-bold hover:text-white uppercase tracking-wider"
+                                >
+                                    Clear Selection
+                                </button>
+                            </div>
+                            <button
+                                onClick={handleBulkDownload}
+                                disabled={isDownloadingBulk}
+                                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm font-bold transition-all shadow-lg flex items-center gap-2"
+                                style={{ backgroundColor: primaryColor }}
+                            >
+                                {isDownloadingBulk ? (
+                                    <>
+                                        <div className="animate-spin h-4 w-4 border-2 border-white/20 border-t-white rounded-full"></div>
+                                        Zipping...
+                                    </>
+                                ) : (
+                                    <>
+                                        <DownloadIcon />
+                                        Download ZIP
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
+
+const CheckIcon = () => (
+    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" />
+    </svg>
+);
 
 const ChevronLeftIcon = () => (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
