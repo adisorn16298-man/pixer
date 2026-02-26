@@ -12,7 +12,7 @@ export async function PUT(request: Request) {
         const {
             name, brandName, brandLogoUrl, watermarkUrl, frameUrl,
             watermarkPortraitUrl, framePortraitUrl,
-            whiteLabel, jpegQuality, thumbQuality
+            whiteLabel, footerText, jpegQuality, thumbQuality
         } = body;
 
         const user = await prisma.user.findFirst();
@@ -26,7 +26,7 @@ export async function PUT(request: Request) {
             data: {
                 name, brandName, brandLogoUrl, watermarkUrl, frameUrl,
                 watermarkPortraitUrl, framePortraitUrl,
-                whiteLabel, jpegQuality, thumbQuality
+                whiteLabel, footerText, jpegQuality, thumbQuality
             },
         });
 

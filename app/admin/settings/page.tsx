@@ -19,6 +19,7 @@ export default function SettingsPage() {
         watermarkPortraitUrl: '',
         framePortraitUrl: '',
         whiteLabel: false,
+        footerText: '',
         jpegQuality: 80,
         thumbQuality: 60
     });
@@ -38,6 +39,7 @@ export default function SettingsPage() {
                     watermarkPortraitUrl: data.watermarkPortraitUrl || '',
                     framePortraitUrl: data.framePortraitUrl || '',
                     whiteLabel: data.whiteLabel || false,
+                    footerText: data.footerText || '',
                     jpegQuality: data.jpegQuality || 80,
                     thumbQuality: data.thumbQuality || 60
                 });
@@ -149,6 +151,7 @@ export default function SettingsPage() {
                                     {renderInput('Brand Name', 'brandName')}
                                     {renderInput('Brand Logo URL', 'brandLogoUrl')}
                                     {renderInput('White Label Mode', 'whiteLabel', 'Remove "Powered by Pixer" from the public gallery', 'checkbox')}
+                                    {renderInput('Custom Footer Text', 'footerText', 'Change the "pixer-lite" brand name in the public footer.')}
                                 </section>
                                 <section className="space-y-8">
                                     <div className="flex items-center space-x-3 mb-2">

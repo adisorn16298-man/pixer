@@ -19,6 +19,7 @@ model User {
   watermarkPortraitUrl String?
   framePortraitUrl     String?
   whiteLabel      Boolean  @default(false)
+  footerText      String?  @default("pixer-lite")
   jpegQuality     Int      @default(80)
   thumbQuality    Int      @default(60)
   templates      BrandingTemplate[]

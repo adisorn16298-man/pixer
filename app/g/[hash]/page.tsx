@@ -103,7 +103,7 @@ export default async function PublicGallery({ params }: { params: { hash: string
 
             <footer className="py-20 text-center border-t border-slate-900 bg-slate-950/50">
                 <p className="text-slate-500 text-sm">
-                    Powered by <span className="font-semibold tracking-tighter" style={{ color: primaryColor }}>pixer-lite</span>
+                    Powered by <span className="font-semibold tracking-tighter" style={{ color: primaryColor }}>{eventData.photographer.footerText || 'pixer-lite'}</span>
                 </p>
             </footer>
         </main>
