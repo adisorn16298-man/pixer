@@ -187,10 +187,21 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
 
                             <motion.div
                                 key={selectedPhoto.id}
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                dragElastic={0.5}
+                                onDragEnd={(_, info) => {
+                                    const swipeThreshold = 50;
+                                    if (info.offset.x < -swipeThreshold) {
+                                        handleNext();
+                                    } else if (info.offset.x > swipeThreshold) {
+                                        handlePrev();
+                                    }
+                                }}
                                 initial={{ scale: 0.9, opacity: 0, x: 20 }}
                                 animate={{ scale: 1, opacity: 1, x: 0 }}
                                 exit={{ scale: 0.9, opacity: 0, x: -20 }}
-                                className="relative max-w-full max-h-full flex items-center justify-center p-4"
+                                className="relative max-w-full max-h-full flex items-center justify-center p-4 cursor-grab active:cursor-grabbing"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 <img
@@ -198,11 +209,8 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                                     className="max-w-full max-h-[75vh] md:max-h-[85vh] rounded-lg shadow-2xl object-contain select-none shadow-indigo-500/20"
                                     style={{ boxShadow: `0 30px 60px -12px ${primaryColor}66` }}
                                     alt="Selected"
+                                    draggable={false}
                                 />
-
-                                {/* Mobile Navigation Zones (Hotspots) */}
-                                <div className="absolute inset-y-0 left-0 w-1/3 md:hidden" onClick={handlePrev}></div>
-                                <div className="absolute inset-y-0 right-0 w-1/3 md:hidden" onClick={handleNext}></div>
                             </motion.div>
 
                             {/* Next Button */}
