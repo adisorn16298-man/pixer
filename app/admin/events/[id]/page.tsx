@@ -64,6 +64,12 @@ export default function EventManagement() {
             .then(data => setTemplates(data));
     }, [id]);
 
+    useEffect(() => {
+        if (event?.name) {
+            document.title = `${event.name} | Manage Event`;
+        }
+    }, [event?.name]);
+
     const publicUrl = event ? `${typeof window !== 'undefined' ? window.location.origin : ''}/g/${event.shortHash}` : '';
 
     const handleDownloadQR = () => {

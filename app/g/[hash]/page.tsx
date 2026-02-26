@@ -1,6 +1,23 @@
 import prisma from '@/lib/prisma';
 import MasonryGallery from '@/components/MasonryGallery';
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
+
+export async function generateMetadata(
+    { params }: { params: { hash: string } }
+): Promise<Metadata> {
+    const event = await prisma.event.findUnique({
+        where: { shortHash: params.hash },
+        select: { name: true }
+    });
+
+    if (!event) return { title: 'Event Not Found' };
+
+    return {
+        title: `${event.name} | Pixer Gallery`,
+        description: `View photos from ${event.name}`,
+    };
+}
 
 export default async function PublicGallery({ params }: { params: { hash: string } }) {
     const event = await prisma.event.findUnique({
