@@ -25,6 +25,26 @@ export default function SettingsPage() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [storageStats, setStorageStats] = useState({
+        usedBytes: 0,
+        totalBytes: 10 * 1024 * 1024 * 1024,
+        usedGb: "0.00",
+        totalGb: 10,
+        percentage: 0,
+        photoCount: 0
+    });
+
+    const fetchStorageStats = () => {
+        fetch('/api/admin/stats/storage')
+            .then(res => res.json())
+            .then(data => {
+                setStorageStats({
+                    ...data,
+                    usedGb: (data.usedBytes / (1024 * 1024 * 1024)).toFixed(2),
+                    totalGb: data.quotaGb
+                });
+            });
+    };
 
     useEffect(() => {
         fetch('/api/admin/settings')
@@ -45,6 +65,8 @@ export default function SettingsPage() {
                 });
                 setIsLoading(false);
             });
+
+        fetchStorageStats();
     }, []);
 
     const handleSave = async () => {
@@ -140,6 +162,34 @@ export default function SettingsPage() {
                         transition={{ duration: 0.2 }}
                         className="bg-slate-900/30 border border-slate-800/50 rounded-[40px] p-10 overflow-hidden relative"
                     >
+                        {/* Storage Usage Section */}
+                        <div className="mb-10 p-8 bg-indigo-600/5 border border-indigo-600/20 rounded-[32px]">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                                <div>
+                                    <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <span className="text-indigo-400">📊</span> Storage Usage
+                                    </h3>
+                                    <p className="text-slate-400 text-sm mt-1">Total high-resolution photos archived in S3/Local.</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-black text-white">{storageStats.usedGb} <span className="text-indigo-500/50 text-base">/ {storageStats.totalGb} GB</span></p>
+                                    <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{storageStats.percentage.toFixed(1)}% Capacity Used</p>
+                                </div>
+                            </div>
+                            <div className="relative h-4 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${storageStats.percentage}%` }}
+                                    className={`h-full rounded-full ${storageStats.percentage > 90 ? 'bg-red-500' : storageStats.percentage > 70 ? 'bg-yellow-500' : 'bg-indigo-500'}`}
+                                    style={{ boxShadow: `0 0 20px ${storageStats.percentage > 90 ? '#ef444460' : storageStats.percentage > 70 ? '#eab30860' : '#6366f160'}` }}
+                                />
+                            </div>
+                            <div className="mt-4 flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></div> {storageStats.photoCount} Photos</span>
+                                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div> System Healthy</span>
+                            </div>
+                        </div>
+
                         {activeTab === 'branding' && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                 <section className="space-y-8">

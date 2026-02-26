@@ -104,6 +104,7 @@ export async function processAndUploadImage({
       thumbnailKey,
       width: metadata.width,
       height: metadata.height,
+      fileSize: buffer.length,
     };
   } catch (err) {
     console.error(`[ImageProcessor] CRITICAL FAILURE:`, err);
@@ -192,6 +193,7 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
         thumbnailKey: result.thumbnailKey,
         width: result.width!,
         height: result.height!,
+        fileSize: result.fileSize!,
         mimeType: 'image/jpeg', // Defaulting to jpeg since we process to jpeg
       },
     });
