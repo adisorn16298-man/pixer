@@ -163,7 +163,7 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                     >
                         All Photos
                     </button>
-                    {moments.map(moment => (
+                    {moments?.map(moment => (
                         <button
                             key={moment.id}
                             onClick={() => setActiveMoment(moment.id)}
