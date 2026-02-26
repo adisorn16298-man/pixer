@@ -202,3 +202,125 @@ export async function processPhotoForEvent(buffer: Buffer, originalFilename: str
     throw error;
   }
 }
+
+async function getBufferFromKey(key: string): Promise<Buffer> {
+  const { isS3Enabled, getObjectFromS3 } = await import('./s3-upload');
+
+  if (isS3Enabled) {
+    const response = await getObjectFromS3(key);
+    const body = response.Body as any;
+    // Helper to convert stream to buffer
+    const chunks: any[] = [];
+    for await (const chunk of body) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  } else {
+    const localPath = path.join(process.cwd(), 'public', key);
+    return await fs.readFile(localPath);
+  }
+}
+
+export async function reprocessPhoto(photoId: string) {
+  try {
+    const photo = await prisma.photo.findUnique({
+      where: { id: photoId },
+      include: { event: { include: { template: true } } }
+    });
+
+    if (!photo) throw new Error('Photo not found');
+
+    console.log(`[ImageProcessor] Reprocessing photo ${photoId} (${photo.originalKey})`);
+
+    // 1. Get original buffer
+    const buffer = await getBufferFromKey(photo.originalKey);
+
+    // 2. Identify orientation
+    const metadata = await sharp(buffer).metadata();
+    const isPortrait = (metadata.height || 0) > (metadata.width || 0);
+
+    // 3. Resolve branding inputs (using the same logic as processPhotoForEvent)
+    const user = await prisma.user.findFirst();
+
+    let selectedWatermarkUrl = isPortrait
+      ? ((photo.event?.template as any)?.watermarkPortraitUrl || (user as any)?.watermarkPortraitUrl || (photo.event?.template as any)?.watermarkUrl || (user as any)?.watermarkUrl)
+      : ((photo.event?.template as any)?.watermarkUrl || (user as any)?.watermarkUrl);
+
+    let selectedFrameUrl = isPortrait
+      ? ((photo.event?.template as any)?.framePortraitUrl || (user as any)?.framePortraitUrl || (photo.event?.template as any)?.frameUrl || (user as any)?.frameUrl)
+      : ((photo.event?.template as any)?.frameUrl || (user as any)?.frameUrl);
+
+    let watermarkInput: string | Buffer | undefined = undefined;
+    let frameInput: string | Buffer | undefined = undefined;
+
+    if (selectedWatermarkUrl) {
+      if (selectedWatermarkUrl.startsWith('http')) {
+        const res = await fetch(selectedWatermarkUrl);
+        if (res.ok) watermarkInput = Buffer.from(await res.arrayBuffer());
+      } else {
+        watermarkInput = (selectedWatermarkUrl.startsWith('/') && !selectedWatermarkUrl.startsWith('//'))
+          ? path.join(process.cwd(), 'public', selectedWatermarkUrl.slice(1))
+          : path.isAbsolute(selectedWatermarkUrl) ? selectedWatermarkUrl : path.join(process.cwd(), 'public', selectedWatermarkUrl);
+      }
+    }
+
+    if (selectedFrameUrl) {
+      if (selectedFrameUrl.startsWith('http')) {
+        const res = await fetch(selectedFrameUrl);
+        if (res.ok) frameInput = Buffer.from(await res.arrayBuffer());
+      } else {
+        frameInput = (selectedFrameUrl.startsWith('/') && !selectedFrameUrl.startsWith('//'))
+          ? path.join(process.cwd(), 'public', selectedFrameUrl.slice(1))
+          : path.isAbsolute(selectedFrameUrl) ? selectedFrameUrl : path.join(process.cwd(), 'public', selectedFrameUrl);
+      }
+    }
+
+    // 4. Process & Upload (Overwriting existing keys)
+    // We use the same keys from the photo record
+    const { isS3Enabled, uploadToS3 } = await import('./s3-upload');
+
+    // Generate Watermarked/Framed Image
+    const composites = [];
+    const mainWidth = metadata.width || 0;
+    const mainHeight = metadata.height || 0;
+
+    const exists = async (p: string) => await fs.stat(p).then(() => true).catch(() => false);
+
+    if (frameInput && (typeof frameInput !== 'string' || await exists(frameInput))) {
+      const frameBuffer = await sharp(frameInput).resize(mainWidth, mainHeight, { fit: 'fill' }).toBuffer();
+      composites.push({ input: frameBuffer, blend: 'over' as sharp.Blend });
+    }
+
+    if (watermarkInput && (typeof watermarkInput !== 'string' || await exists(watermarkInput))) {
+      const watermarkBuffer = await sharp(watermarkInput).resize(mainWidth, mainHeight, { fit: 'inside', withoutEnlargement: true }).toBuffer();
+      composites.push({ input: watermarkBuffer, gravity: 'center', blend: 'over' as sharp.Blend });
+    }
+
+    const processedBuffer = composites.length > 0
+      ? await sharp(buffer).composite(composites).jpeg({ quality: user?.jpegQuality || 80 }).toBuffer()
+      : buffer;
+
+    if (isS3Enabled) {
+      await uploadToS3(processedBuffer, photo.watermarkedKey, 'image/jpeg');
+    } else {
+      const localPath = path.join(process.cwd(), 'public', photo.watermarkedKey);
+      await fs.writeFile(localPath, processedBuffer);
+    }
+
+    // Generate Thumbnail
+    const thumbnailBuffer = await sharp(buffer).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: user?.thumbQuality || 60 }).toBuffer();
+
+    if (isS3Enabled) {
+      await uploadToS3(thumbnailBuffer, photo.thumbnailKey, 'image/jpeg');
+    } else {
+      const localPath = path.join(process.cwd(), 'public', photo.thumbnailKey);
+      await fs.writeFile(localPath, thumbnailBuffer);
+    }
+
+    console.log(`✅ [ImageProcessor] Reprocessed photo ${photoId} successfully.`);
+    return true;
+  } catch (error) {
+    console.error(`[ImageProcessor] Failed to reprocess photo ${photoId}:`, error);
+    throw error;
+  }
+}

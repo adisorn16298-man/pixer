@@ -34,6 +34,8 @@ export default function EventManagement() {
     const [event, setEvent] = useState<EventDetail | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState({ current: 0, total: 0, errors: 0 });
+    const [isReprocessing, setIsReprocessing] = useState(false);
+    const [reprocessStatus, setReprocessStatus] = useState({ current: 0, total: 0, message: '' });
     const [newMomentName, setNewMomentName] = useState('');
     const [editingMomentId, setEditingMomentId] = useState<string | null>(null);
     const [editingMomentName, setEditingMomentName] = useState('');
@@ -170,6 +172,31 @@ export default function EventManagement() {
             fetchEvent();
         }
     };
+
+    const handleReprocessBranding = async () => {
+        if (!confirm('Are you sure you want to update branding for ALL photos in this event? This will use the current watermark and frame settings.')) return;
+
+        setIsReprocessing(true);
+        setReprocessStatus({ current: 0, total: 100, message: 'Starting...' });
+
+        try {
+            const res = await fetch(`/api/admin/events/${id}/reprocess`, {
+                method: 'POST',
+            });
+
+            if (!res.ok) throw new Error('Failed to reprocess branding');
+
+            const data = await res.json();
+            alert(data.message);
+        } catch (error: any) {
+            console.error('Reprocess error:', error);
+            alert(`Error during update: ${error.message}`);
+        } finally {
+            setIsReprocessing(false);
+            fetchEvent();
+        }
+    };
+
 
     const handleTemplateChange = async (templateId: string) => {
         const res = await fetch(`/api/admin/events/${id}`, {
@@ -404,6 +431,21 @@ export default function EventManagement() {
                                     Processing {uploadStatus.current} of {uploadStatus.total}
                                     {uploadStatus.errors > 0 && <span className="text-red-500 ml-2">({uploadStatus.errors} errors)</span>}
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Reprocess Progress Overlay */}
+                {isReprocessing && (
+                    <div className="fixed bottom-10 right-10 z-50 animate-in slide-in-from-bottom-5">
+                        <div className="bg-slate-900 border border-indigo-500/50 p-6 rounded-3xl shadow-2xl flex items-center gap-6 min-w-[320px]">
+                            <div className="h-12 w-12 flex items-center justify-center bg-indigo-600/20 rounded-full animate-spin">
+                                ⚙️
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="text-white font-bold mb-1">Updating Branding</h4>
+                                <p className="text-xs text-slate-400">Please wait while we re-process all photos...</p>
                             </div>
                         </div>
                     </div>
@@ -645,6 +687,13 @@ export default function EventManagement() {
                                         ? "Photos in this event will use the specific frame/watermark from this template."
                                         : "Using global brand settings defined in the Settings menu."}
                                 </p>
+                                <button
+                                    onClick={handleReprocessBranding}
+                                    disabled={isReprocessing || event.photos.length === 0}
+                                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all border border-slate-700 flex items-center justify-center gap-2"
+                                >
+                                    ✨ {isReprocessing ? 'Updating...' : 'Update Branding for All Photos'}
+                                </button>
                             </div>
                         </div>
                     </div>
