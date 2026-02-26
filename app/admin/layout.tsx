@@ -1,4 +1,4 @@
-import Sidebar from '@/components/Sidebar';
+import AdminShell from '@/components/AdminShell';
 import prisma from '@/lib/prisma';
 
 export default async function AdminLayout({
@@ -10,13 +10,8 @@ export default async function AdminLayout({
     const photographerName = user?.name || 'Photographer';
 
     return (
-        <div className="flex h-screen bg-slate-950 text-slate-200 overflow-hidden">
-            <Sidebar photographerName={photographerName} />
-            <main className="flex-1 overflow-y-auto bg-slate-950">
-                <div className="p-8 max-w-6xl mx-auto">
-                    {children}
-                </div>
-            </main>
-        </div>
+        <AdminShell photographerName={photographerName}>
+            {children}
+        </AdminShell>
     );
 }
