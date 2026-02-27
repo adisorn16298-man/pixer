@@ -5,28 +5,22 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const events = await prisma.event.findMany({
+        const event = await prisma.event.findFirst({
             where: {
                 isFeatured: true
             },
             include: {
-                photographer: {
-                    select: {
-                        name: true,
-                        brandName: true,
-                        brandLogoUrl: true
+                photographer: true,
+                moments: true,
+                photos: {
+                    orderBy: {
+                        createdAt: 'desc'
                     }
                 },
-                _count: {
-                    select: { photos: true }
-                }
             },
-            orderBy: {
-                date: 'desc'
-            }
         });
 
-        return NextResponse.json(events);
+        return NextResponse.json(event);
     } catch (error) {
         console.error('Featured Events API Error:', error);
         return NextResponse.json({ error: 'Failed to fetch featured events' }, { status: 500 });

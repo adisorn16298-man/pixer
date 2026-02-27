@@ -10,6 +10,7 @@ interface Event {
     slug: string;
     shortHash: string;
     date: string;
+    isFeatured: boolean;
     _count: { photos: number; moments: number };
 }
 
@@ -58,6 +59,30 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleToggleFeatured = async (event: Event) => {
+        const newStatus = !event.isFeatured;
+        // Optimistic update
+        setEvents(prev => prev.map(e => ({
+            ...e,
+            isFeatured: e.id === event.id ? newStatus : (newStatus ? false : e.isFeatured)
+        })));
+
+        try {
+            const res = await fetch(`/api/admin/events/${event.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ isFeatured: newStatus }),
+            });
+            if (!res.ok) {
+                // Revert on failure
+                fetchEvents();
+                alert('Failed to update featured status');
+            }
+        } catch (error) {
+            fetchEvents();
+            alert('Error updating featured status');
+        }
+    };
+
     return (
         <div>
             <div className="flex justify-between items-center mb-10">
@@ -91,9 +116,16 @@ export default function AdminDashboard() {
                                 className="group bg-slate-900/50 border border-slate-800 p-6 rounded-2xl hover:border-indigo-600/50 transition-all hover:bg-slate-900 flex items-center justify-between"
                             >
                                 <div className="flex gap-6 items-center">
-                                    <div className="h-16 w-16 bg-slate-800 rounded-xl flex items-center justify-center text-2xl group-hover:bg-indigo-600/20 group-hover:text-indigo-400 transition-colors">
-                                        📅
-                                    </div>
+                                    <button
+                                        onClick={() => handleToggleFeatured(event)}
+                                        className={`h-16 w-16 rounded-xl flex items-center justify-center text-2xl transition-all border ${event.isFeatured
+                                            ? 'bg-amber-500/20 border-amber-500/50 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                                            : 'bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-500'
+                                            }`}
+                                        title={event.isFeatured ? "Featured on Home Page" : "Click to feature on Home Page"}
+                                    >
+                                        {event.isFeatured ? '🌟' : '📅'}
+                                    </button>
                                     <div>
                                         <h3 className="text-xl font-bold text-slate-100">{event.name}</h3>
                                         <p className="text-sm text-slate-500 mb-2">/g/{event.shortHash}</p>

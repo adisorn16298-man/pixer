@@ -39,6 +39,14 @@ export async function PATCH(
         const body = await request.json();
         const { name, slug, date, templateId, primaryColor, secondaryColor, backgroundColor, logoUrl, isFeatured } = body;
 
+        // If this event is being set as featured, unfeature all others first
+        if (isFeatured === true) {
+            await prisma.event.updateMany({
+                where: { id: { not: params.id } },
+                data: { isFeatured: false }
+            });
+        }
+
         const event = await prisma.event.update({
             where: { id: params.id },
             data: {

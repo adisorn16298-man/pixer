@@ -1,36 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-
-interface FeaturedEvent {
-    id: string;
-    name: string;
-    shortHash: string;
-    date: string;
-    primaryColor: string;
-    photographer: {
-        brandName: string;
-        brandLogoUrl: string;
-    };
-    _count: { photos: number };
-}
+import MasonryGallery from '@/components/MasonryGallery';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HomePage() {
-    const [events, setEvents] = useState<FeaturedEvent[]>([]);
+    const [event, setEvent] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         fetch('/api/events/featured')
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    setEvents(data);
-                } else {
-                    console.error('Expected array from featured events API, got:', data);
-                    setEvents([]);
-                }
+                // Since API returns object (single event) or null
+                setEvent(data && data.id ? data : null);
                 setIsLoading(false);
             })
             .catch(err => {
@@ -39,92 +22,119 @@ export default function HomePage() {
             });
     }, []);
 
-    return (
-        <main className="min-h-screen bg-slate-950 text-white selection:bg-indigo-500/30">
-            <header className="relative py-24 px-8 text-center overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent opacity-50"></div>
-
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="relative z-10"
-                >
-                    <h1 className="text-5xl md:text-8xl font-black tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-500">
-                        PIXER <span className="text-indigo-500 text-3xl md:text-5xl align-top">LITE</span>
-                    </h1>
-                    <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium">
-                        Professional event photography, delivered with speed and style.
-                        Explore our featured public galleries.
-                    </p>
-                </motion.div>
-            </header>
-
-            <div className="max-w-7xl mx-auto px-8 pb-32">
-                {isLoading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="h-64 bg-slate-900/50 rounded-[32px] animate-pulse border border-slate-800"></div>
-                        ))}
-                    </div>
-                ) : events.length === 0 ? (
-                    <div className="text-center py-20 bg-slate-900/30 rounded-[40px] border border-slate-800 border-dashed">
-                        <p className="text-slate-500 font-medium text-lg">No public galleries are currently featured.</p>
-                        <p className="text-slate-600 text-sm mt-2">Check back soon for new event photos!</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {events.map((event, index) => (
-                            <motion.div
-                                key={event.id}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: index * 0.1 }}
-                            >
-                                <Link
-                                    href={`/g/${event.shortHash}`}
-                                    className="group block relative bg-slate-900 border border-slate-800 rounded-[40px] p-8 hover:border-indigo-500/50 transition-all hover:shadow-2xl hover:shadow-indigo-500/10 overflow-hidden"
-                                >
-                                    <div
-                                        className="absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full -mr-16 -mt-16 opacity-20 transition-opacity group-hover:opacity-40"
-                                        style={{ backgroundColor: event.primaryColor || '#6366f1' }}
-                                    ></div>
-
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start mb-10">
-                                            {event.photographer?.brandLogoUrl ? (
-                                                <img src={event.photographer.brandLogoUrl} className="h-8 opacity-60 grayscale group-hover:grayscale-0 transition-all" alt="Logo" />
-                                            ) : (
-                                                <div className="h-8 w-8 bg-slate-800 rounded-lg flex items-center justify-center text-xs font-bold text-slate-500">P</div>
-                                            )}
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                                                {event._count.photos} Photos
-                                            </span>
-                                        </div>
-
-                                        <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">
-                                            {event.name}
-                                        </h3>
-                                        <p className="text-slate-500 text-sm font-medium mb-6">
-                                            {new Date(event.date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                                        </p>
-
-                                        <div
-                                            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest"
-                                            style={{ color: event.primaryColor || '#6366f1' }}
-                                        >
-                                            View Gallery <span>→</span>
-                                        </div>
-                                    </div>
-                                </Link>
-                            </motion.div>
-                        ))}
-                    </div>
-                )}
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-500 animate-pulse font-bold tracking-widest uppercase text-[10px]">Loading Experience...</p>
             </div>
+        );
+    }
 
-            <footer className="p-12 text-center text-slate-600 text-[10px] font-bold uppercase tracking-[0.3em] border-t border-slate-900/50">
-                &copy; 2026 PIXER LITE • DIRECT DELIVERY ENGINE
-            </footer>
+    if (!event) {
+        return (
+            <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8">
+                <div className="max-w-md text-center">
+                    <h1 className="text-6xl font-black mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-800">
+                        PIXER
+                    </h1>
+                    <div className="p-8 bg-slate-900/50 border border-slate-800 rounded-[40px] space-y-4">
+                        <p className="text-slate-400 font-medium">No public galleries are currently featured on the main page.</p>
+                        <p className="text-slate-500 text-sm">Please check back soon for new event photos from our professional photographers.</p>
+                    </div>
+                </div>
+            </main>
+        );
+    }
+
+    // Process event data for gallery component
+    const s3Url = process.env.NEXT_PUBLIC_S3_PUBLIC_URL || '';
+    const photos = event.photos.map((p: any) => ({
+        id: p.id,
+        thumbnailUrl: p.thumbnailKey ? (s3Url ? `${s3Url}/${p.thumbnailKey}` : `/${p.thumbnailKey}`) : '',
+        watermarkedUrl: p.watermarkedKey ? (s3Url ? `${s3Url}/${p.watermarkedKey}` : `/${p.watermarkedKey}`) : '',
+        width: p.width,
+        height: p.height,
+        momentId: p.momentId || undefined,
+    }));
+
+    const moments = event.moments.map((m: any) => ({
+        id: m.id,
+        name: m.name,
+    }));
+
+    const primaryColor = event.primaryColor || '#6366f1';
+    const backgroundColor = event.backgroundColor || '#020617';
+
+    return (
+        <main className="min-h-screen transition-colors duration-700" style={{
+            backgroundColor: backgroundColor,
+            '--primary-color': primaryColor,
+            '--bg-color': backgroundColor,
+        } as any}>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={event.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1 }}
+                >
+                    <header className="relative py-24 px-8 text-center overflow-hidden">
+                        <div
+                            className="absolute inset-0 blur-[120px] rounded-full scale-150 transform -translate-y-1/2 opacity-20"
+                            style={{ backgroundColor: primaryColor }}
+                        ></div>
+
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="relative z-10"
+                        >
+                            {event.logoUrl ? (
+                                <img src={event.logoUrl} className="h-20 mx-auto mb-8 opacity-90 object-contain max-w-[240px]" alt="Logo" />
+                            ) : event.photographer?.brandLogoUrl && (
+                                <img src={event.photographer.brandLogoUrl} className="h-14 mx-auto mb-8 opacity-80" alt="Brand Logo" />
+                            )}
+
+                            <h1 className="text-5xl md:text-8xl font-black tracking-tighter text-white mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50">
+                                {event.name}
+                            </h1>
+
+                            <p className="font-black tracking-[0.3em] uppercase text-[10px] md:text-sm mb-8 px-4 py-2 bg-white/5 inline-block rounded-full border border-white/10" style={{ color: primaryColor }}>
+                                {new Date(event.date).toLocaleDateString('en-US', { dateStyle: 'full' })}
+                            </p>
+
+                            <div
+                                className="h-1 w-24 mx-auto rounded-full shadow-lg"
+                                style={{ backgroundColor: primaryColor, boxShadow: `0 0 20px ${primaryColor}80` }}
+                            ></div>
+                        </motion.div>
+                    </header>
+
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.4, duration: 0.8 }}
+                        className="max-w-7xl mx-auto py-12 px-4 md:px-8"
+                    >
+                        <MasonryGallery
+                            initialPhotos={photos}
+                            moments={moments}
+                            eventId={event.id}
+                            brandName={event.photographer?.brandName || event.photographer?.name || undefined}
+                            themeColor={primaryColor}
+                        />
+                    </motion.div>
+
+                    <footer className="py-24 text-center border-t border-white/5 bg-black/20">
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em]">
+                            Powered by <span style={{ color: primaryColor }}>{event.photographer?.footerText || 'PIXER LITE ENGINE'}</span>
+                        </p>
+                    </footer>
+                </motion.div>
+            </AnimatePresence>
         </main>
     );
 }
