@@ -110,14 +110,15 @@ export default function NewEventPage() {
                             </label>
                         </div>
                     </div>
+                </div>
 
-                    <button
-                        type="submit"
-                        disabled={isSaving}
-                        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/30 text-lg"
-                    >
-                        {isSaving ? 'Creating Event...' : '🚀 Launch Event'}
-                    </button>
+                <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/30 text-lg"
+                >
+                    {isSaving ? 'Creating Event...' : '🚀 Launch Event'}
+                </button>
             </form>
         </div>
     );
