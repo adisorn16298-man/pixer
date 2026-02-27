@@ -24,7 +24,11 @@ export default function AdminDashboard() {
         fetch('/api/admin/events')
             .then(res => res.json())
             .then(data => {
-                setEvents(data);
+                if (Array.isArray(data)) {
+                    setEvents(data);
+                } else {
+                    setEvents([]);
+                }
                 setIsLoading(false);
             });
     };

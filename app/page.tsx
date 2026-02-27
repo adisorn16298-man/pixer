@@ -25,7 +25,16 @@ export default function HomePage() {
         fetch('/api/events/featured')
             .then(res => res.json())
             .then(data => {
-                setEvents(data);
+                if (Array.isArray(data)) {
+                    setEvents(data);
+                } else {
+                    console.error('Expected array from featured events API, got:', data);
+                    setEvents([]);
+                }
+                setIsLoading(false);
+            })
+            .catch(err => {
+                console.error('Fetch error:', err);
                 setIsLoading(false);
             });
     }, []);
