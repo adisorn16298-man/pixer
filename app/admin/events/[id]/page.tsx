@@ -17,6 +17,7 @@ interface EventDetail {
     secondaryColor?: string | null;
     backgroundColor?: string | null;
     logoUrl?: string | null;
+    isFeatured: boolean;
 }
 
 const THEME_PRESETS = [
@@ -309,6 +310,18 @@ export default function EventManagement() {
         }
     };
 
+    const handleToggleFeatured = async () => {
+        if (!event) return;
+        const newStatus = !event.isFeatured;
+        const res = await fetch(`/api/admin/events/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ isFeatured: newStatus }),
+        });
+        if (res.ok) {
+            setEvent(prev => prev ? { ...prev, isFeatured: newStatus } : null);
+        }
+    };
+
     const handleUpdateEventDetails = async () => {
         const res = await fetch(`/api/admin/events/${id}`, {
             method: 'PATCH',
@@ -409,7 +422,18 @@ export default function EventManagement() {
                             </button>
                         </div>
                     )}
-                    <p className="mt-2 font-mono" style={{ color: currentPrimary }}>Public URL: g/{event.shortHash}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <p className="font-mono text-sm" style={{ color: currentPrimary }}>Public URL: g/{event.shortHash}</p>
+                        <button
+                            onClick={handleToggleFeatured}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border ${event.isFeatured
+                                ? 'bg-indigo-600/20 text-indigo-400 border-indigo-600/30'
+                                : 'bg-slate-800 text-slate-500 border-slate-700'
+                                }`}
+                        >
+                            <span>{event.isFeatured ? '🌟 Featured' : '🌑 Hidden from Home'}</span>
+                        </button>
+                    </div>
                 </div>
                 <div className="flex gap-4">
                     {/* Ingest Folder Button */}

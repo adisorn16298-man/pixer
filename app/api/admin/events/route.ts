@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, date, slug, templateId } = body;
+        const { name, date, slug, templateId, isFeatured } = body;
 
         // Hardcode a default photographer for now (first user)
         const photographer = await prisma.user.findFirst();
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
                 shortHash: nanoid(7), // Generate Pixer style hash
                 photographerId: photographer.id,
                 templateId: (templateId && templateId !== 'none') ? templateId : null,
+                isFeatured: isFeatured || false,
             },
         });
 

@@ -37,7 +37,7 @@ export async function PATCH(
 ) {
     try {
         const body = await request.json();
-        const { name, slug, date, templateId, primaryColor, secondaryColor, backgroundColor, logoUrl } = body;
+        const { name, slug, date, templateId, primaryColor, secondaryColor, backgroundColor, logoUrl, isFeatured } = body;
 
         const event = await prisma.event.update({
             where: { id: params.id },
@@ -49,7 +49,8 @@ export async function PATCH(
                 primaryColor,
                 secondaryColor,
                 backgroundColor,
-                logoUrl
+                logoUrl,
+                isFeatured
             } as any,
         });
 

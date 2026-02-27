@@ -9,6 +9,7 @@ export default function NewEventPage() {
     const [name, setName] = useState('');
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [templateId, setTemplateId] = useState('none');
+    const [isFeatured, setIsFeatured] = useState(false);
     const [templates, setTemplates] = useState<any[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -27,7 +28,7 @@ export default function NewEventPage() {
             const res = await fetch('/api/admin/events', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, date, templateId }),
+                body: JSON.stringify({ name, date, templateId, isFeatured }),
             });
 
             if (res.ok) {
@@ -96,16 +97,27 @@ export default function NewEventPage() {
                         <p className="text-[10px] text-slate-500 italic mt-1 px-1">
                             You can change this anytime later in the event settings.
                         </p>
+                        <div className="flex items-center space-x-3 bg-slate-950 border border-slate-800 p-4 rounded-xl">
+                            <input
+                                type="checkbox"
+                                id="isFeatured"
+                                checked={isFeatured}
+                                onChange={e => setIsFeatured(e.target.checked)}
+                                className="w-5 h-5 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <label htmlFor="isFeatured" className="text-sm font-medium text-slate-300 cursor-pointer">
+                                Show on Home Page (Galleries Viewer)
+                            </label>
+                        </div>
                     </div>
-                </div>
 
-                <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/30 text-lg"
-                >
-                    {isSaving ? 'Creating Event...' : '🚀 Launch Event'}
-                </button>
+                    <button
+                        type="submit"
+                        disabled={isSaving}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white py-4 rounded-2xl font-bold transition-all shadow-xl shadow-indigo-600/30 text-lg"
+                    >
+                        {isSaving ? 'Creating Event...' : '🚀 Launch Event'}
+                    </button>
             </form>
         </div>
     );

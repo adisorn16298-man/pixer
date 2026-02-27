@@ -60,6 +60,7 @@ model Event {
   secondaryColor  String?  @default("#4f46e5")
   logoUrl         String?
   backgroundColor String?  @default("#020617")
+  isFeatured      Boolean  @default(false)
   moments         Moment[]
   photos          Photo[]
   createdAt       DateTime @default(now())
