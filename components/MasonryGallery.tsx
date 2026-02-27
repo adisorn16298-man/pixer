@@ -103,8 +103,9 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
         }
     };
 
-    // Keyboard support
+    // Keyboard support and Auto-open from URL
     useEffect(() => {
+        // Handle keyboard
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!selectedPhoto) return;
             if (e.key === 'ArrowRight') handleNext();
@@ -113,8 +114,17 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
         };
 
         window.addEventListener('keydown', handleKeyDown);
+
+        // Handle auto-open if photoId is in URL
+        const params = new URLSearchParams(window.location.search);
+        const photoId = params.get('photoId');
+        if (photoId && !selectedPhoto) {
+            const photo = photos.find(p => p.id === photoId);
+            if (photo) setSelectedPhoto(photo);
+        }
+
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedPhoto, currentIndex, filteredPhotos]);
+    }, [selectedPhoto, currentIndex, filteredPhotos, photos]);
 
     const handleDownload = (photo: Photo) => {
         console.log('[Gallery] Triggering download for photo:', photo.id);
@@ -122,7 +132,10 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
     };
 
     const handleShare = async (photo: Photo) => {
-        const shareUrl = `${window.location.origin}/api/photos/download?photoId=${photo.id}`;
+        // Construct a preview URL instead of a direct download link
+        const url = new URL(window.location.origin + window.location.pathname);
+        url.searchParams.set('photoId', photo.id);
+        const shareUrl = url.toString();
 
         // Always copy to clipboard first as a robust fallback
         try {
@@ -140,7 +153,7 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                 fetch(`/api/photos/${photo.id}/share`, { method: 'POST' }).catch(err => console.error('Failed to track share:', err));
 
                 await navigator.share({
-                    title: 'Check out this photo!',
+                    title: `Check out this photo from ${brandName || 'our event'}!`,
                     url: shareUrl,
                 });
             } catch (err) {
@@ -325,7 +338,9 @@ export default function MasonryGallery({ initialPhotos, moments, eventId, brandN
                             </button>
 
                             <button onClick={() => {
-                                const shareUrl = `${window.location.origin}/api/photos/download?photoId=${selectedPhoto.id}`;
+                                const url = new URL(window.location.origin + window.location.pathname);
+                                url.searchParams.set('photoId', selectedPhoto.id);
+                                const shareUrl = url.toString();
                                 navigator.clipboard.writeText(shareUrl).then(() => {
                                     setShowCopied(true);
                                     setTimeout(() => setShowCopied(false), 2000);
